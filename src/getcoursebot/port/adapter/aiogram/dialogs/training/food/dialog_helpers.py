@@ -61,8 +61,7 @@ class Clicker:
     async def on_confirm_preview(
         event: t.CallbackQuery, 
         button, 
-        dialog_manager: 
-        DialogManager, 
+        dialog_manager: DialogManager, 
         service: FromDishka[FitnessService]
     ):
         # (video[0], video[1], message.message_id, message.content_type)
@@ -117,6 +116,41 @@ class Getter:
             "text_training": data["training"].text,
             "is_like": data["is_like"]
         }
+    
+    @staticmethod
+    @inject
+    async def get_random_training_like(
+        dialog_manager: DialogManager,
+        service: FromDishka[QueryService],
+        **kwargs
+    ):
+        dialog_manager.show_mode = ShowMode.DELETE_AND_SEND
+        data = await service.query_training_like(
+            dialog_manager.dialog_data["user_id"],
+        )
+        if data["training"] is not None:
+            builder = MediaGroupBuilder()
+            for video in sorted(data["training"].videos, key=lambda x: x.message_id):
+                builder.add_video(video.file_id)
+
+            dialog_manager.dialog_data["training_id"] = data["training"].training_id
+
+            bot: Bot = dialog_manager.middleware_data["bot"]
+            await bot.send_media_group(
+                dialog_manager.dialog_data["user_id"], 
+                media=builder.build()
+            )
+            return {
+                "text_training": data["training"].text,
+                "is_not": True,
+                "is_like": data["is_like"]
+            }
+        else:
+            return {
+                "text_training": "Видео отсутсвуют!",
+                "is_not": False,
+                "is_like": data["is_like"]
+            }
         
     @staticmethod
     async def get_media_group_videos(dialog_manager: DialogManager, **kwargs) -> dict:

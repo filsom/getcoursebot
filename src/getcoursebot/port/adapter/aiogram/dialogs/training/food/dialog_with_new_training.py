@@ -100,7 +100,7 @@ async def on_mailling_message(
         state=MaillingDialog.new_mall,
         data={
             "photos": dialog_manager.dialog_data['videos'],
-            "text_mailling_mess": dialog_manager.find('text_training_1').get_value()
+            "text_mailling_mess": dialog_manager.find('text_training_1').get_value(),
         },
         show_mode=ShowMode.EDIT,
         mode=StartMode.RESET_STACK

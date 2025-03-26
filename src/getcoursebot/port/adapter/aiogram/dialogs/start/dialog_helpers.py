@@ -27,6 +27,13 @@ from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states impor
 )
 
 
+MAP = {
+    IDRole.Food: NameRole.Food,
+    IDRole.Admin: NameRole.Admin,
+    IDRole.Training: NameRole.Training,
+}
+
+
 class Getter:
     @staticmethod
     async def get_input_categoty_name(
@@ -201,19 +208,10 @@ class Clicker:
         dialog_manager: DialogManager,
         service: FromDishka[QueryService],
     ):
-        data = await service.query_roles_with_id(
-            callback.from_user.id
-        )
-        if not data["roles"]:
-            await dialog_manager.done()
-
-        if NameRole.Admin not in data["roles"]:
-            await dialog_manager.done()
-
         await dialog_manager.start(
             NewTrainingDialog.start,
             show_mode=ShowMode.EDIT,
-            mode=StartMode.NORMAL
+            mode=StartMode.NORMAL,
         )
 
     @staticmethod
@@ -244,7 +242,8 @@ class Clicker:
         else:
             await service.insert_role(
                 dialog_manager.start_data["sub_email"],
-                int(item_id)
+                int(item_id),
+                MAP.get(int(item_id))
             )
             await dialog_manager.switch_to(
                 state=AddAccessDialog.access,
@@ -313,22 +312,30 @@ class Clicker:
             callback.from_user.id,
             str(datetime.now().date())
         )
-        if data["menu_id"] is None:
-            await dialog_manager.start(
-                DayMenuDialog.breakfast,
-                data={
-                    "temporal_recipes": [],
-                    "recipe": []
-                },
-                show_mode=ShowMode.EDIT,
-                mode=StartMode.RESET_STACK
-            )
+        data1 = await service.query_roles_with_id(
+            callback.from_user.id
+        )
+        # Добавить чтобы админ смог смотреть меню
+        if NameRole.Food in data1["roles"]: 
+            if data["menu_id"] is None:
+                await dialog_manager.start(
+                    DayMenuDialog.breakfast,
+                    data={
+                        "temporal_recipes": [],
+                        "recipe": []
+                    },
+                    show_mode=ShowMode.EDIT,
+                    mode=StartMode.RESET_STACK
+                )
+            else:
+                await dialog_manager.start(
+                    PaidStartingDialog.menu,
+                    data={"user_id": callback.from_user.id}
+                )
         else:
-            await dialog_manager.start(
-                PaidStartingDialog.menu,
-                data={"user_id": callback.from_user.id}
-            )
-
+            dialog_manager.dialog_data["training"] = True
+            dialog_manager.dialog_data["food"] = True
+            await dialog_manager.next()
 
     @staticmethod
     @inject
@@ -341,11 +348,7 @@ class Clicker:
         data = await service.query_users(
             callback.from_user.id
         )
-        if NameRole.Food not in data["roles"]:
-            dialog_manager.dialog_data["training"] = True
-            dialog_manager.dialog_data["food"] = False
-            await dialog_manager.next()
-        else:
+        if NameRole.Food in data["roles"] or NameRole.Admin in data["roles"]:
             await dialog_manager.start(
                 FoodDialog.start,
                 data={
@@ -356,6 +359,10 @@ class Clicker:
                 mode=StartMode.NORMAL,
                 show_mode=ShowMode.EDIT
             )
+        else:
+            dialog_manager.dialog_data["training"] = True
+            dialog_manager.dialog_data["food"] = False
+            await dialog_manager.next()
             
     @staticmethod
     @inject
@@ -407,6 +414,7 @@ class Clicker:
         data = await service.query_roles_with_id(
             dialog_manager.start_data["user_id"]
         )
+        print(data)
         if NameRole.Free not in data["roles"]:
             await dialog_manager.start(
                 PaidStartingDialog.start,

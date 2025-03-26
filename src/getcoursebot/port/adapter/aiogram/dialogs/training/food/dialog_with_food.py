@@ -32,14 +32,21 @@ class Getter:
             "count": len(activity_types)
         }
 
+
+    # FAST_SLIM = D("-0.8")
+    # FLUENTLY_SLIM = D("-0.9")
+    # DEFAULT = D("1")
+    # FLUENTLY_SET = D("1.1")
+    # FAST_SET = D("1.2")
+
     @staticmethod
     async def get_data_target(**kwargs):
         target_types = [
-            ("Быстро похудеть", Decimal("-20")),
-            ("Плавно похудеть", Decimal("-10")),
+            ("Быстро похудеть", Decimal("-0.8")),
+            ("Плавно похудеть", Decimal("-0.9")),
             ("Поддержание веса", Decimal("1")),
-            ("Плавный набор", Decimal("10")),
-            ("Быстрый набор", Decimal("20")),
+            ("Плавный набор", Decimal("1.1")),
+            ("Быстрый набор", Decimal("1.2")),
         ]
         return {
             "types": target_types,

@@ -134,9 +134,8 @@ class Clicker:
         dialog_manager: DialogManager,
         service: FromDishka[FitnessService], 
     ):
-        recipe = dialog_manager.start_data["temporal_recipes"].pop(-1)
+        dialog_manager.start_data["temporal_recipes"].pop(-1)
         recipes: list[Recipe] = dialog_manager.start_data["recipe"]
-        recipes.append(recipe)
         snak_kkal = await service.make_day_menu(
             MakeDayMenuCommand(
                 callback.from_user.id,
@@ -177,7 +176,7 @@ async def get_calc_kkal(
     dialog_manager: DialogManager,
     **kwargs
 ):
-    return {"сalc_kkal": dialog_manager.dialog_data["сalc_kkal"]}
+    return {"сalc_kkal": dialog_manager.dialog_data["snack_kkal"]}
 
 
 day_menu_dialog = Dialog(

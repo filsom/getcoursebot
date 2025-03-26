@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, StrEnum, auto
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 from decimal import Decimal as D
 
 from getcoursebot.domain.model.proportions import KBJU
@@ -34,7 +34,7 @@ class AdjustedIngredient:
 
 @dataclass
 class AdjustedRecipe:
-    recipe_id: int
+    recipe_id: UUID
     name: str
     recipe: str
     photo_id: int
@@ -65,7 +65,7 @@ class Recipe:
                 value = D("1")
             adjusted.append(AdjustedIngredient(ingredient.name, value, ingredient.unit))
         return AdjustedRecipe(
-            self.recipe_id, 
+            uuid4(), 
             self.name,
             self.recipe,
             self.photo_id,
@@ -102,10 +102,9 @@ class DayMenu:
         
         default = D("0")
         for recept in self.my_recepts:
-            print(recept.amount_kkal)
             default += recept.amount_kkal
         if user_snack:
-            self.my_snack_kkal = D(str(default)).quantize(D("1"))
+            self.my_snack_kkal = user_amount_kkal - D(str(default)).quantize(D("1"))
 
     def repr(self):
         TYPE_MAP = {

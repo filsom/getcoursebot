@@ -4,11 +4,11 @@ from decimal import Decimal as D
 
 
 class TargetProcent(Enum):
-    FAST_SLIM = D("-20")
-    FLUENTLY_SLIM = D("-10")
+    FAST_SLIM = D("-0.8")
+    FLUENTLY_SLIM = D("-0.9")
     DEFAULT = D("1")
-    FLUENTLY_SET = D("10")
-    FAST_SET = D("20")
+    FLUENTLY_SET = D("1.1")
+    FAST_SET = D("1.2")
 
     def is_slim(self) -> bool:
         return self in [
@@ -50,21 +50,22 @@ class Proportions:
     target_procent: TargetProcent
 
     def calculate_kkal(self) -> D:
-        normal_kkal = D(D("10")*self.weight) \
-                +D("6.25")*self.height \
-                -D("5")*self.age-D("161") \
-                * self.coefficient
-        if self.target_procent == D("-20") or self.target_procent == D("-10"):
-            value_procent = -(normal_kkal*(self.target_procent.value/100))
-        elif self.target_procent == D("20") or self.target_procent == D("10"):
-            value_procent = normal_kkal*(self.target_procent.value/100)
-        else:
-            value_procent = D("0")
-        kkal = normal_kkal+D(str(value_procent))
-        if kkal < 1200:
-            kkal = D("1200")
-        
-        return kkal.quantize(D("1"))
+        x = D(self.target_procent)
+        normal_kkal = D(D("10") * self.weight + D("6.25") * self.height - D("5") * self.age - D("161")) * D(self.coefficient)
+        # if x == D("-20") or x == D("-10"):
+        #     value_procent = normal_kkal*(x)
+        # elif x == D("20") or x == D("10"):
+        #     value_procent = normal_kkal*(x)
+        # else:
+        #     # print(normal_kkal, "n2")
+        #     # print(value_procent, 'B2')
+        #     value_procent = D("0")
+        val = normal_kkal * x
+        x = abs(val)
+        if x < 1200:
+            x = D("1200")
+
+        return x.quantize(D("1"))
     
     def calculate_kbju(self):
         b = D(str(D("1.5")*self.weight)).quantize(D("1"))

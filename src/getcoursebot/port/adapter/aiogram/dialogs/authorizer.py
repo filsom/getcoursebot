@@ -39,19 +39,19 @@ async def get_export_key(
             return (export_id, group_id)
         
 
-async def get_users_email(exports_id: int, group_id: int, access_key: str, client: ClientSession):
-        MAP_GROUP = {
-            2315673: NameRole.Training,
-            3088338: NameRole.Food,
-        }
-        async with client.get(
-            f"https://workoutmila.ru/pl/api/account/exports/{exports_id}?key={access_key}"
-        ) as response:
-            list_items = {"role": MAP_GROUP.get(group_id)}
-            list_items.setdefault("emails", [])
-            for item in response["info"]["items"]:
-                list_items["emails"].append(item[1].lower())
-            return list_items
+# async def get_users_email(exports_id: int, group_id: int, access_key: str, client: ClientSession):
+#         MAP_GROUP = {
+#             2315673: NameRole.Training,
+#             3088338: NameRole.Food,
+#         }
+#         async with client.get(
+#             f"https://workoutmila.ru/pl/api/account/exports/{exports_id}?key={access_key}"
+#         ) as response:
+#             list_items = {"role": MAP_GROUP.get(group_id)}
+#             list_items.setdefault("emails", [])
+#             for item in response["info"]["items"]:
+#                 list_items["emails"].append(item[1].lower())
+#             return list_items
 
 async def update_status(engine: AsyncEngine):
     async with AsyncSession(engine) as session:

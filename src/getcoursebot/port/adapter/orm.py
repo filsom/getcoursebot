@@ -4,6 +4,7 @@ from uuid import uuid4
 import sqlalchemy as sa
 from sqlalchemy.orm import registry, composite, relationship, column_property
 
+from getcoursebot.domain.model.access import Group
 from getcoursebot.domain.model.day_menu import AdjustedIngredient, AdjustedRecipe, DayMenu, Ingredient, Recipe
 from getcoursebot.domain.model.proportions import KBJU, Proportions
 from getcoursebot.domain.model.training import Category, LikeTraining, MaillingMedia, Malling, Media, Photos, Training
@@ -27,8 +28,8 @@ mailling_table = sa.Table(
 users_table = sa.Table(
     'users',
     metadata,
-    sa.Column('email', sa.String(100), primary_key=True, nullable=False),
-    sa.Column('user_id', sa.BigInteger, index=True, nullable=False),
+    sa.Column('user_id', sa.BigInteger, primary_key=True, nullable=False),
+    sa.Column('email', sa.String, unique=True, nullable=False),
     sa.Column('norma_kkal', sa.DECIMAL(20, 0), nullable=True),
     sa.Column('b', sa.DECIMAL(20, 0), nullable=True),
     sa.Column('j', sa.DECIMAL(20, 0), nullable=True),
@@ -36,30 +37,18 @@ users_table = sa.Table(
     sa.Column('age', sa.Integer, nullable=True),
     sa.Column('height', sa.Integer, nullable=True),
     sa.Column('weight', sa.Integer, nullable=True),
-    sa.Column('coefficient', sa.String(100), nullable=True),
-    sa.Column('target_procent', sa.String(100), nullable=True),
+    sa.Column('coefficient', sa.DECIMAL(20, 0), nullable=True),
+    sa.Column('target_procent', sa.DECIMAL(20, 0), nullable=True),
     sa.Column('on_view', sa.Boolean, nullable=False, default=False),
 )
 
 
-users_roles_table = sa.Table(
-    "users_roles",
-    metadata,
-    sa.Column('email', sa.ForeignKey('users.email', onupdate="CASCADE"), primary_key=True, nullable=False),
-    sa.Column('role_id', sa.ForeignKey('roles.role_id'), primary_key=True, nullable=False),
-)
-
-@dataclass
-class UsersRoles:
-    email: str
-    role_id: int
-
-
 roles_table = sa.Table(
-    'roles',
+    "roles",
     metadata,
-    sa.Column('role_id', sa.Integer, primary_key=True, nullable=False),
-    sa.Column('name', sa.String(20), nullable=False)
+    sa.Column('oid', sa.BigInteger, primary_key=True, autoincrement=True, nullable=False),
+    sa.Column('email', sa.String, unique=False),
+    sa.Column('group', sa.Integer, nullable=False),
 )
 
 
@@ -103,8 +92,7 @@ adjusted_ingredients_table = sa.Table(
 adjusted_recipes_table = sa.Table(
     'adjusted_recipes',
     metadata,
-    sa.Column('oid', sa.UUID, primary_key=True, default=uuid4, nullable=False),
-    sa.Column('recipe_id', sa.Integer, nullable=False),
+    sa.Column('recipe_id', sa.UUID, primary_key=True, nullable=False),
     sa.Column('menu_id', sa.ForeignKey('day_menu.menu_id'), nullable=False),
     sa.Column('name', sa.String, nullable=False),
     sa.Column('recipe', sa.String, nullable=False),
@@ -118,7 +106,7 @@ day_menu_table = sa.Table(
    'day_menu',
     metadata,
     sa.Column('menu_id', sa.UUID, primary_key=True, default=uuid4, nullable=False),
-    sa.Column('user_id', sa.ForeignKey('users.user_id'), nullable=False),
+    sa.Column('user_id', sa.BigInteger, nullable=False),
     sa.Column('created_at', sa.DATE, nullable=False),
     sa.Column('my_snack_kkal', sa.DECIMAL(20, 0), nullable=True),
 )
@@ -188,10 +176,6 @@ def mappers(mapper: registry):
         }
     )
     mapper.map_imperatively(
-        UsersRoles,
-        users_roles_table
-    )
-    mapper.map_imperatively(
         LikeTraining,
         like_training_table
     )
@@ -225,13 +209,7 @@ def mappers(mapper: registry):
                 users_table.c.j,
                 users_table.c.u
             ),
-            "roles": relationship(
-                Role,
-                secondary=users_roles_table,
-                primaryjoin="User.email == UsersRoles.email",
-                secondaryjoin="UsersRoles.role_id == Role.role_id",
-                lazy='joined'
-            ),
+            'norma_kkal': users_table.c.norma_kkal,
             "_proportions": users_table.c.age,
             "proportions": composite(
                 Proportions,

@@ -23,9 +23,9 @@ mappers(mapper)
 async def main():
     engine = create_async_engine(
         'postgresql+psycopg://postgres:som@localhost:5433',
-        echo=False
+        echo=True
     )
-    bot = Bot(..., default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot("7682965504:AAEX7p2SPM_Kq8ZRsg-1L9nuNnqATvL6h_I", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage, events_isolation=SimpleEventIsolation())
     dp.include_router(starting_router)

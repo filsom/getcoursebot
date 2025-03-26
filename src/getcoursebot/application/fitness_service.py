@@ -10,6 +10,7 @@ from getcoursebot.application.error import AlreadyExists
 from getcoursebot.domain.model.day_menu import Ingredient, Recipe, TypeMeal
 from getcoursebot.domain.model.proportions import KBJU, Proportions
 from getcoursebot.domain.model.training import Category, LikeTraining, Training
+from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.repositories import RecipeRepository, TrainingRepository, UserRepositories
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
 from getcoursebot.port.adapter.orm import users_table, roles_table
@@ -109,13 +110,21 @@ class FitnessService:
         table: Spreadsheet,
         user_repository: UserRepositories,
         recipe_repository: RecipeRepository,
-        training_repository: TrainingRepository
+        training_repository: TrainingRepository,
+        # query_service: QueryService
     ) -> None:
         self._session = session
         self._table = table
         self._user_repository = user_repository
         self._recipe_repository = recipe_repository
         self._training_repository = training_repository
+        # self._query_service = query_service
+
+    async def create_free_user(self, user_id: int, email: str) -> None:
+        async with self._session.begin():
+            new_user = User(user_id, email)
+            self._session.add(new_user)
+            await self._session.commit()
 
     async def add_mailling(self, m):
         async with self._session.begin():
@@ -125,7 +134,7 @@ class FitnessService:
     async def upload_recipe(self):
         async with self._session.begin():
             head = await self._recipe_repository.query_recipe_count()
-            data = self._table.worksheet("Лист1")
+            data = self._table.worksheet("List1")
             rows = data.get_all_records()[head:]
             if rows:
                 for row in rows:
@@ -168,11 +177,6 @@ class FitnessService:
     
     async def add_new_category(self, user_id: int, name: str) -> None:
         async with self._session.begin():
-            user = await self._user_repository.with_id(user_id)
-
-            if not authorize(user.roles, NameRole.Admin):
-                raise 
-            
             exists_category = await self._training_repository.get_category_with_name(name.title())
             if exists_category:
                 raise AlreadyExists
@@ -199,22 +203,19 @@ class FitnessService:
                 command.email
             )
             if user is not None:
-                raise AlreadyExists
+                data = self._query_service.query_roles_with_id(
+                    command.user_id
+                )
+                return data["roles"]
             
-            role = Role(IDRole.Free, NameRole.Free)
             new_user = User(
                 command.user_id,
                 command.email,
-                []
             )
             await self._user_repository.add(new_user)
             await self._session.flush()
-            await self._user_repository.add_role(
-                new_user.email, 
-                role.role_id
-            )
             await self._session.commit()
-            return [role]
+            return [NameRole.Free]
 
     async def make_day_menu(self, command: cmd.MakeDayMenuCommand) -> None:
         async with self._session.begin():
@@ -233,18 +234,18 @@ class FitnessService:
             return snak_kkal
 
     async def set_proportions(self, command: cmd.CalculateDayNormCommand) -> None:
-        async with self._session.begin():
-            user = await self._user_repository.with_id(command.user_id)
-            user.calculate_day_norm(
-                Proportions(
-                    command.age,
-                    command.height,
-                    command.weight,
-                    command.coefficient,
-                    command.target_procent
-                )
+        # async with self._session.begin():
+        user = await self._user_repository.with_id(command.user_id)
+        user.calculate_day_norm(
+            Proportions(
+                command.age,
+                command.height,
+                command.weight,
+                command.coefficient,
+                command.target_procent
             )
-            await self._session.commit()
+        )
+        await self._session.commit()
 
     async def set_input_user_data(self, command: cmd.InputeDayNormCommand) -> None:
         async with self._session.begin():
@@ -266,10 +267,6 @@ class FitnessService:
 
     async def add_training(self, command: cmd.AddTrainingCommand) -> UUID:
         async with self._session.begin():
-            user = await self._user_repository.with_id(command.user_id)
-            if authorize(user.roles, NameRole.Free):
-                raise 
-            
             training_id = uuid4()
             training = Training(
                     training_id,

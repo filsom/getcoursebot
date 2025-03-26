@@ -92,7 +92,6 @@ async def on_role_selected(
         dialog_manager.dialog_data["text_mailling_mess"] = text
     if media is not None:
         dialog_manager.dialog_data["photos"] = media
-        
     if item_id == "free":
         dialog_manager.dialog_data["roles"] = [IDRole.Free]
     else:
@@ -313,18 +312,20 @@ async def on_click_send_mailling_for_users(
     users = await service.query_users_all_with_role(
         roles
     )
+    print(users, 'ffffffffff')
     _ = asyncio.create_task(send_message_photo(users, text, dialog_manager.dialog_data["photos"], bot))
-    await dialog_manager.done()
-
+    await dialog_manager.start(
+        AdminStartingDialog.start,
+        mode=StartMode.RESET_STACK
+    )
 
 
 async def send_message_photo(users, text, photos, bot: Bot):
-    print(photos)
     for user_id in users:
         try:
             if len(photos) == 1:
                 if len(text) < 1024:
-                    if photos[3] == 'photo':
+                    if photos[0][3] == 'photo':
                         await bot.send_photo(
                             user_id, 
                             photos[0][0],
@@ -337,7 +338,7 @@ async def send_message_photo(users, text, photos, bot: Bot):
                             caption=text
                         )
                 else:
-                    if photos[3] == 'photo':
+                    if photos[0][3] == 'photo':
                         await bot.send_photo(
                             user_id, 
                             photos[0][0],
@@ -361,6 +362,7 @@ async def send_message_photo(users, text, photos, bot: Bot):
                 for photo in photos:
                     if not capt:
                         if len(text) < 1024:
+                            print('1')
                             builder.add(
                                 type=photo[3],
                                 media=photo[0],
@@ -382,8 +384,8 @@ async def send_message_photo(users, text, photos, bot: Bot):
                     )
             await asyncio.sleep(0.33)       
         except Exception as e:
-            print(e) 
-            continue
+            raise e
+            # continue
 
 
 mailling_dialog = Dialog(

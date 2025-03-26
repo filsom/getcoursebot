@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 class TrainingDialog(StatesGroup):
     start = State()
     view = State()
+    view_like = State()
 
 
 class NewTrainingDialog(StatesGroup):

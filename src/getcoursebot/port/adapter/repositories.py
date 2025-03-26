@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from getcoursebot.domain.model.day_menu import DayMenu, Recipe
 from getcoursebot.domain.model.training import Category, Training
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
-from getcoursebot.port.adapter.orm import users_table, users_roles_table, recipes_table
+from getcoursebot.port.adapter.orm import users_table, roles_table, recipes_table
 
 
 class UserRepositories:
@@ -17,12 +17,8 @@ class UserRepositories:
     async def add(self, user: User) -> None:
         self._session.add(user)
 
-    async def add_role(self, email: str, role_id: int) -> None:
-        new_stmt = sa.insert(users_roles_table).values(
-            role_id=role_id,
-            email=email
-        )
-        await self._session.execute(new_stmt)
+    async def add_role(self, ) -> None:
+        self._session.add()
 
     async def with_email(self, email: str) -> User | None:
         stmt = sa.select(User).where(User.email == email)

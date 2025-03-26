@@ -17,7 +17,7 @@ class DependencyProvider(Provider):
 
     @provide(scope=Scope.APP)
     async def get_sheets(self) -> Spreadsheet:
-        cleint = service_account("/Users/filippsomov/Desktop/getcoursebot/src/getcoursebot/credentials.json")
+        cleint = service_account("/Users/filippsomov/Desktop/getcoursebot/credentials.json")
         return cleint.open_by_key("14RajqHw2lq9_2QRzyqgB9K7f2oiiVHhLlWrZnkz5vvE")
     
     @provide(scope=Scope.REQUEST)
@@ -32,14 +32,14 @@ class DependencyProvider(Provider):
     async def get_fitness_servise(
         self, 
         session: AsyncSession,
-        table: Spreadsheet
+        table: Spreadsheet,
     ) -> FitnessService:
         return FitnessService(
             session,
             table,
             UserRepositories(session),
             RecipeRepository(session),
-            TrainingRepository(session)
+            TrainingRepository(session),
         )
     
     @provide(scope=Scope.REQUEST)

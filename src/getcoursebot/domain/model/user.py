@@ -30,6 +30,7 @@ class IDRole(object):
 
 @dataclass
 class Role:
+    email: str
     role_id: int
     name: str
 
@@ -38,7 +39,6 @@ class Role:
 class User:
     user_id: int
     email: str
-    roles: list[Role] | None = None 
     norma_kkal: D | None = None
     kbju: KBJU | None = None
     proportions: Proportions | None = None
@@ -70,10 +70,3 @@ class User:
             raise 
         
         self.user_id = user_id
-
-    def set_access(self, role_id: IDRole, name: NameRole) -> None:
-        for role in self.roles:
-            if role.name == name:
-                return 
-            
-        self.roles.append(Role(role_id, name))

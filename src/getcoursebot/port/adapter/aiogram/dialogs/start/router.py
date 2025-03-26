@@ -3,12 +3,14 @@ from aiogram import filters as f
 from aiogram_dialog import DialogManager, ShowMode, StartMode
 from dishka.integrations.aiogram import FromDishka, inject
 
+from getcoursebot.domain.model.access import Group
 from getcoursebot.domain.model.user import NameRole
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import AdminStartingDialog
 from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_with_free import (
     FreeStartingDialog
 )
+from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_with_free_user import AnonUserDialog
 from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_with_paid import (
     PaidStartingDialog
 )
@@ -25,27 +27,38 @@ async def start(
     service: FromDishka[QueryService]
 ):
     await message.delete()
-    data = await service.query_roles_with_id(
+    access_user = await service.query_user_roles(
         message.from_user.id
     )
-    if NameRole.Admin in data["roles"]:
+    if access_user.groups_empty():
         await dialog_manager.start(
-            AdminStartingDialog.start, 
-            data={"user_id": message.from_user.id, "roles": data["roles"]},
-            mode=StartMode.RESET_STACK,
-            show_mode=ShowMode.EDIT
+            AnonUserDialog.start,
+            mode=StartMode.RESET_STACK
         )
-    elif NameRole.Food in data["roles"] or NameRole.Training in data["roles"]:
-        await dialog_manager.start(
-            PaidStartingDialog.start, 
-            data={"user_id": message.from_user.id, "roles": data["roles"]},
-            mode=StartMode.RESET_STACK,
-            show_mode=ShowMode.EDIT
-        )
+    elif access_user.check_group(Group.ADMIN):
+        pass
+    
     else:
-        await dialog_manager.start(
-            FreeStartingDialog.start, 
-            data={"user_id": message.from_user.id, "email": data["email"]},
-            mode=StartMode.RESET_STACK,
-            show_mode=ShowMode.EDIT
-        )
+        pass
+
+    # if NameRole.Admin in data["roles"]:
+    #     await dialog_manager.start(
+    #         AdminStartingDialog.start, 
+    #         data={"user_id": message.from_user.id, "roles": data["roles"]},
+    #         mode=StartMode.RESET_STACK,
+    #         show_mode=ShowMode.EDIT
+    #     )
+    # elif NameRole.Food in data["roles"] or NameRole.Training in data["roles"]:
+    #     await dialog_manager.start(
+    #         PaidStartingDialog.start, 
+    #         data={"user_id": message.from_user.id, "roles": data["roles"]},
+    #         mode=StartMode.RESET_STACK,
+    #         show_mode=ShowMode.EDIT
+    #     )
+    # else:
+    #     await dialog_manager.start(
+    #         FreeStartingDialog.start, 
+    #         data={"user_id": message.from_user.id, "email": data["email"]},
+    #         mode=StartMode.RESET_STACK,
+    #         show_mode=ShowMode.EDIT
+    #     )

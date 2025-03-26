@@ -9,7 +9,6 @@ from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_helpers import Click
 
 async def get_roles(dialog_manager: DialogManager, **kwargs):
     if IDRole.Admin in dialog_manager.start_data.get("roles"):
-        print(1)
         return {"roles": True}
     return {"roles": False}
 
