@@ -30,6 +30,24 @@ class QueryService:
     ):
         self.session = session
 
+    async def query_all_user_id_with_role(self, is_exists: bool = False) -> list[int]:
+        stmt = sa.select(users_table)
+        if not is_exists:
+            stmt = (
+                stmt.outerjoin(
+                    roles_table,
+                    roles_table.c.email == users_table.c.email
+                )
+                .where(roles_table.c.email == None)
+            )
+        else:
+            stmt = (
+                stmt.join(
+                    roles_table,
+                    roles_table.c.email == users_table.c.email
+                )
+            )
+
     async def query_recipe_with_type(self, type_meal: str) -> dict:
         MAP_MEAL = {
             TypeMeal.BREAKFAST: "завтрак",

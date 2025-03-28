@@ -7,8 +7,10 @@ from aiogram_dialog.widgets import text, kbd
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
+from getcoursebot.application.commands import AddTrainingCommand
+from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import TrainingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import NewTrainingDialog, TrainingDialog, UploadMediaDialog
 
 
 async def on_сlick_view_like_training(
@@ -207,5 +209,86 @@ trainings_dialog = Dialog(
         ),
         state=TrainingDialog.view,
         getter=get_random_training
+    )
+)
+
+
+@inject
+async def get_categories_name(
+    dialog_manager: DialogManager, 
+    service: FromDishka[QueryService], 
+    **kwargs
+):
+    return await service.query_categories()
+
+
+async def on_click_category_name(
+    callback: t.CallbackQuery,
+    button,
+    dialog_manager: DialogManager,
+    item_id,
+):
+    dialog_manager.dialog_data["category_id"] = item_id
+    dialog_manager.dialog_data["user_id"] = callback.from_user.id
+    await dialog_manager.start(
+        UploadMediaDialog.start,
+        show_mode=ShowMode.EDIT
+    )
+
+
+@inject
+async def process_result_add_training(
+    start_data,
+    result,
+    dialog_manager: DialogManager,
+    service: FromDishka[FitnessService]
+):
+    if result:
+        dialog_manager.dialog_data["media"] = result["media"]
+        dialog_manager.dialog_data["inpute_text_media"] = result["inpute_text_media"]
+        await service.add_training(
+            AddTrainingCommand(
+                result["user_id"],
+                dialog_manager.dialog_data["category_id"],
+                result["inpute_text_media"],
+                result["media"]
+            )
+        )
+        await dialog_manager.next()
+
+
+new_training_dialog = Dialog(
+    Window(
+        text.Const("Выберите категорию тренировки!"),
+        kbd.Column(
+            kbd.Select(
+                id='id_name_training',
+                text=text.Format("{item[0]}"),
+                items="categories",
+                item_id_getter=operator.itemgetter(1),
+                on_click=on_click_category_name
+            ),
+        ),
+        kbd.Cancel(text.Const("⬅️ В Админ панель"), id="to_main_228"),
+        state=NewTrainingDialog.start,
+        getter=get_categories_name,
+        on_process_result=process_result_add_training
     ),
+    Window(
+        text.Const(
+            "Тренировка успешно сохранена ✅\nРазослать бесплатным пользователям?"
+        ),
+        kbd.Row(
+            kbd.Button(
+                text.Const("Да"),
+                id="yes_mailing",
+                on_click=...
+            ),
+            kbd.Cancel(
+                text.Const("Нет"),
+                id="no_mailing",
+                on_click=...
+            )
+        )
+    )
 )

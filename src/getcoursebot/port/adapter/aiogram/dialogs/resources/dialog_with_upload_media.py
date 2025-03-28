@@ -142,6 +142,7 @@ async def on_click_success(
         dialog_manager.dialog_data["preview_messages"].clear()
     await dialog_manager.done(
         result= {
+            "user_id": callback.from_user.id,
             "media": dialog_manager.dialog_data["media"],
             "inpute_text_media": dialog_manager.dialog_data["media_text"]
         },
