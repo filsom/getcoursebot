@@ -1,147 +1,121 @@
-# import aiohttp
-# import asyncio
+import asyncio
+import logging
+import os
 
-# # Константы для доступа к API
-# BASE_URL = "https://workoutmila.ru/pl/api/account"
-# ACCESS_KEY = "qZ2MZ3kHUxzFZpp4JJvzBQOWeQd1f9hwafDixfBWoYbpQp7OCqcDu6H0PBDQbcqw2JC5LCAVKdK1epLPsFFopntOUHHxtODgQqSxhJlQkjCFvfYio1NCiy98g09p9hDT"  # Замените на ваш ключ доступа
-# GROUP_IDS = [2315673, 3088338]  # Список group_id
+from aiogram import Bot, Dispatcher, F
+from aiogram.enums import ContentType
+from aiogram.filters import CommandStart
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
+from aiogram.types import CallbackQuery, Message
 
-# async def fetch_exports_id(session, group_id, access_key):
-#     """
-#     Отправляет запрос для получения exports_id.
-#     """
-#     url = f"{BASE_URL}/groups/{group_id}/users"
-#     params = {
-#         "key": access_key,
-#         "status": "active"
-#     }
-#     async with session.get(url, params=params) as response:
-#         if response.status == 200:
-#             data = await response.json()
-#             exports_id = data["info"]["export_id"] # Предполагается, что exports_id находится в ответе
-#             if exports_id:
-#                 print(f"[Group {group_id}] Получен exports_id: {exports_id}")
-#                 return exports_id
-#             else:
-#                 raise ValueError(f"[Group {group_id}] В ответе отсутствует exports_id")
-#         else:
-#             raise Exception(f"[Group {group_id}] Ошибка при получении exports_id: {response.status}")
+from aiogram_dialog import (
+    Dialog,
+    DialogManager,
+    StartMode,
+    Window,
+    setup_dialogs,
+)
+from aiogram_dialog.api.entities import MediaAttachment, MediaId
+from aiogram_dialog.widgets.common import ManagedScroll
+from aiogram_dialog.widgets.input import MessageInput
+from aiogram_dialog.widgets.kbd import Button, Group, NumberedPager, StubScroll
+from aiogram_dialog.widgets.media import DynamicMedia
+from aiogram_dialog.widgets.text import Const, Format
 
-# async def fetch_export_data(session, group_id, exports_id, access_key):
-#     """
-#     Отправляет запрос для получения данных по exports_id.
-#     """
-#     url = f"{BASE_URL}/exports/{exports_id}"
-#     params = {
-#         "key": access_key
-#     }
-#     async with session.get(url, params=params) as response:
-#         if response.status == 200:
-#             data = await response.json()
-#             print(f"[Group {group_id}] Получены данные по exports_id: {data}")
-#             return group_id, data
-#         else:
-#             raise Exception(f"[Group {group_id}] Ошибка при получении данных: {response.status}")
 
-# async def process_group_sequentially(session, group_id, access_key):
-#     """
-#     Обрабатывает один group_id последовательно: получает exports_id и затем данные.
-#     """
-#     try:
-#         # Шаг 1: Получаем exports_id
-#         exports_id = await fetch_exports_id(session, group_id, access_key)
-#         await asyncio.sleep(60)
-#         # Шаг 2: Получаем данные по exports_id
-#         group_id, export_data = await fetch_export_data(session, group_id, exports_id, access_key)
+class Medias(StatesGroup):
+    start = State()
+
+
+async def on_input_photo(
+    message: Message,
+    widget: MessageInput,
+    dialog_manager: DialogManager,
+):
+    x = dialog_manager.current_stack().last_message_id
+    b: Bot = dialog_manager.middleware_data["bot"]
+    await b.delete_message(message.from_user.id, x)
+    if message.content_type == ContentType.VIDEO:
+        metadata = (message.video.file_id, message.video.file_unique_id)
+        dialog_manager.dialog_data["content_type"] = ContentType.VIDEO
+    elif message.content_type == ContentType.PHOTO:
+        metadata = (message.photo[-1].file_id, message.photo[-1].file_unique_id)
+        dialog_manager.dialog_data["content_type"] = ContentType.PHOTO
+    dialog_manager.dialog_data.setdefault("media", []).append(metadata)
+    await message.delete()
+
+async def on_delete(
+    callback: CallbackQuery, widget: Button, dialog_manager: DialogManager,
+):
+    scroll: ManagedScroll = dialog_manager.find("pages")
+    media_number = await scroll.get_page()
+    photos = dialog_manager.dialog_data.get("media", [])
+    del photos[media_number]
+    if media_number > 0:
+        await scroll.set_page(media_number - 1)
+
+
+async def getter(dialog_manager: DialogManager, **kwargs) -> dict:
+    scroll: ManagedScroll = dialog_manager.find("pages")
+    media_number = await scroll.get_page()
+    photos = dialog_manager.dialog_data.get("media", [])
+    if photos:
+        photo = photos[media_number]
+        media = MediaAttachment(
+            type=dialog_manager.dialog_data["content_type"],
+            file_id=MediaId(*photo),
+        )
         
-#         # Возвращаем результат для этой группы
-#         return group_id, export_data
-#     except Exception as e:
-#         print(f"[Group {group_id}] Произошла ошибка: {e}")
-#         return group_id, None
-
-# async def main():
-#     """
-#     Основная функция, которая управляет асинхронными операциями для всех групп.
-#     """
-#     async with aiohttp.ClientSession() as session:
-#         results = {}
-#         for group_id in GROUP_IDS:
-#             print(f"Обработка группы: {group_id}")
-#             group_id, data = await process_group_sequentially(session, group_id, ACCESS_KEY)
-#             if data is not None:
-#                 results[group_id] = data
-
-#             await asyncio.sleep(30)
-#         # Вывод итоговых результатов
-#         print("\nИтоговые результаты:")
-#         for group_id, data in results.items():
-#             print(f"Группа {group_id}: {data}")
-
-# # Запуск программы
-# if __name__ == "__main__":
-#     asyncio.run(main())
+    else:
+        media = MediaAttachment(
+            url="https://2dbags.co/wp-content/uploads/revslider/lookbook1-demo_slider/placeholder-38329_1080x675.jpg",
+            type=ContentType.PHOTO,
+        )
+    return {
+        "media_count": len(photos),
+        "media_number": media_number + 1,
+        "media": media,
+    }
 
 
-from dataclasses import dataclass
-from uuid import uuid4
+dialog = Dialog(Window(
+    Const("Send media"),
+    DynamicMedia(selector="media"),
+    StubScroll(id="pages", pages="media_count"),
+    Group(
+        NumberedPager(scroll="pages", when=F["pages"] > 1),
+        width=8,
+    ),
+    Button(
+        Format("🗑️ Delete photo #{media_number}"),
+        id="del",
+        on_click=on_delete,
+        when="media_count",
+        # Alternative F['media_count']
+    ),
+    MessageInput(content_types=[ContentType.VIDEO, ContentType.PHOTO], func=on_input_photo),
+    getter=getter,
+    state=Medias.start,
+))
 
 
-class Group(object):
-    ADMIN = 1
-    FOOD = 2315673
-    TRAINING = 3088338
+async def start(message: Message, dialog_manager: DialogManager):
+    await dialog_manager.start(Medias.start, mode=StartMode.RESET_STACK)
 
 
-class AccessGC:
-    def __init__(self, groups: list[Group]):
-        self.groups = groups
+async def main():
+    # real main
+    logging.basicConfig(level=logging.INFO)
+    storage = MemoryStorage()
+    bot = Bot("7682965504:AAEX7p2SPM_Kq8ZRsg-1L9nuNnqATvL6h_I")
+    dp = Dispatcher(storage=storage, events_isolation=SimpleEventIsolation())
+    dp.include_router(dialog)
 
-    def check_group(self, value: Group) -> bool:
-        if not self.groups:
-            return False
-        
-        for group in self.groups:
-            if group == value or group == Group.ADMIN:
-                return True
-        return False
-    
-    def groups_empty(self) -> bool:
-        if not self.groups:
-            return True
-        
-        return False
-    
-
-x = [{1: "a", 2: "b"}]
+    dp.message.register(start, CommandStart())
+    setup_dialogs(dp)
+    await dp.start_polling(bot)
 
 
-for i in x:
-    # print("-")
-    # print(i.keys())
-    i[1] = i[2] + "a"
-
-
-@dataclass
-class Y:
-    i: int    
-
-@dataclass
-class X:
-    i: int
-
-#     def x(self):
-#         return Y(self.i + 10)
-    
-
-# x = [{12345678: None, "class": X(2)}]
-
-
-# for i in x:
-#     x[12345678] = i["class"].x()
-
-x = {}
-x.setdefault("t", {})
-x["t"].update({1: "a"})
-x["t"].update({2: "b"})
-print(x)
+if __name__ == "__main__":
+    asyncio.run(main())

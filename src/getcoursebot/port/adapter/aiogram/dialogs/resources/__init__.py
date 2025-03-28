@@ -19,13 +19,14 @@ from .dialog_with_admin import (
     add_new_category_dialog
 )
 from .dialog_with_mailling import mailling_dialog, planed_mailling_dialog
+from .dialog_with_upload_media import upload_media_dialog
 
 
 # starting_router.include_router(free_starting_dialog)
 # starting_router.include_router(email_inpute_dialog)
 # starting_router.include_router(try_sub_dialog)
 starting_router.include_router(paid_starting_dialog)
-# starting_router.include_router(admin_starting_dialog)
+starting_router.include_router(upload_media_dialog)
 # starting_router.include_router(users_groups_dialog)
 # starting_router.include_router(add_access_dialog)
 # starting_router.include_router(close_access_dialog)

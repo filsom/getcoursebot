@@ -16,6 +16,13 @@ class NewTrainingDialog(StatesGroup):
     send_pay_training = State()
 
 
+class UploadMediaDialog(StatesGroup):
+    start = State()
+    text = State()
+    view = State()
+
+
+
 class InputDialog(StatesGroup):
     start = State()
     b = State()
