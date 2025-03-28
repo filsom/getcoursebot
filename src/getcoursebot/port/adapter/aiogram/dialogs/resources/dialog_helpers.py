@@ -11,7 +11,7 @@ from getcoursebot.application.commands import CreateUserCommand
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.domain.model.user import IDRole, NameRole
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import (
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import (
     AddAccessDialog,
     CloseAccessDialog,
     FreeStartingDialog, 

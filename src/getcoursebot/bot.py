@@ -14,7 +14,7 @@ from dishka import make_async_container
 from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
 from getcoursebot.port.adapter.dependency_provider import DependencyProvider
-from getcoursebot.port.adapter.aiogram.dialogs.start import starting_router
+from getcoursebot.port.adapter.aiogram.dialogs.resources import starting_router
 from getcoursebot.port.adapter.aiogram.dialogs.training.food import content_router
 from getcoursebot.port.adapter.orm import mappers, metadata, mapper
 
@@ -23,7 +23,7 @@ mappers(mapper)
 async def main():
     engine = create_async_engine(
         'postgresql+psycopg://postgres:som@localhost:5433',
-        echo=True
+        echo=False
     )
     bot = Bot("7682965504:AAEX7p2SPM_Kq8ZRsg-1L9nuNnqATvL6h_I", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     storage = MemoryStorage()

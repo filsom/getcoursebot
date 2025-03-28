@@ -16,7 +16,7 @@ from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.domain.model.training import MaillingMedia, Malling, Media, Photos
 from getcoursebot.domain.model.user import IDRole, NameRole
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import AdminStartingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import AdminStartingDialog
 
 
 class MaillingDialog(StatesGroup):

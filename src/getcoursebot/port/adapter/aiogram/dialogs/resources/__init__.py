@@ -9,7 +9,7 @@ from .dialog_with_free_user import (
     anon_starting_dialog,
     free_starting_dialog
 )
-from .dialog_with_paid import paid_starting_dialog
+from .dialog_with_paid_user import paid_starting_dialog
 from .dialog_with_admin import (
     add_access_dialog, 
     users_groups_dialog, 
@@ -24,7 +24,7 @@ from .dialog_with_mailling import mailling_dialog, planed_mailling_dialog
 # starting_router.include_router(free_starting_dialog)
 # starting_router.include_router(email_inpute_dialog)
 # starting_router.include_router(try_sub_dialog)
-# starting_router.include_router(paid_starting_dialog)
+starting_router.include_router(paid_starting_dialog)
 # starting_router.include_router(admin_starting_dialog)
 # starting_router.include_router(users_groups_dialog)
 # starting_router.include_router(add_access_dialog)

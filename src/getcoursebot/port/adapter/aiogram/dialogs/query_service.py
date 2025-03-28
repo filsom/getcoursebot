@@ -1,10 +1,12 @@
 import datetime
 from uuid import UUID, uuid4
 import sqlalchemy as sa
+from aiogram.enums import ContentType
 from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram_dialog.api.entities import MediaAttachment
+from aiogram_dialog.api.entities import MediaAttachment, MediaId
 from getcoursebot.domain.model.access import AccessGC
-from getcoursebot.domain.model.day_menu import DayMenu, Recipe
+from getcoursebot.domain.model.day_menu import DayMenu, Recipe, TypeMeal
 from getcoursebot.domain.model.training import Category, Malling, Training
 from getcoursebot.domain.model.user import IDRole, NameRole, Role, User
 from getcoursebot.port.adapter.orm import (
@@ -12,10 +14,12 @@ from getcoursebot.port.adapter.orm import (
     roles_table, 
     categories_table,
     like_training_table,
-    day_menu_table,
     roles_table,
     recipes_table,
     mailling_table,
+    trainigs_table,
+    medias_table,
+    ingredients_table
 )
 
 
@@ -26,15 +30,181 @@ class QueryService:
     ):
         self.session = session
 
-    async def query_user_roles(self, user_id: int) -> AccessGC:
+    async def query_recipe_with_type(self, type_meal: str) -> dict:
+        MAP_MEAL = {
+            TypeMeal.BREAKFAST: "завтрак",
+            TypeMeal.LUNCH: "обед",
+            TypeMeal.DINNER: "ужин",
+            TypeMeal.SNACK: "перекус"
+        }
         stmt = (
-            sa.select(roles_table)
-            .join(users_table, roles_table.c.email == users_table.c.email)
+            sa.select(
+                recipes_table.c.recipe_id.label("recipe_id"),
+                recipes_table.c.photo_id,
+            )
+            .where(recipes_table.c.type_meal == type_meal)
+            .order_by(sa.func.random())
+            .limit(1)
+        )
+        rows = await self.session.execute(stmt)
+        for row in rows:
+            recipe_id = row.recipe_id
+            photo_id = row.photo_id
+        ingred_stmt = (
+            sa.select(ingredients_table.c.name)
+            .where(ingredients_table.c.recipe_id == recipe_id)
+        )
+        ingred_rows = await self.session.execute(ingred_stmt)
+        names = ingred_rows.scalars().all()
+        str_names = ""
+        for name in names:
+            str_names += f"🔹 {name}\n"
+
+        image = MediaAttachment(
+            ContentType.PHOTO, 
+            file_id=MediaId(file_id=photo_id)
+        )
+        data = {
+            "recipe_id": recipe_id,
+            "name_meal": MAP_MEAL.get(type_meal),
+            "photo": image,
+            "photo_id": photo_id,
+            "name_ingredients": str_names,
+        }
+        if type_meal == TypeMeal.SNACK:
+            data["is_my_snack"] = True
+        else:
+            data["is_my_snack"] = False
+
+        return data
+
+    async def delete_like_training(self, training_id: int):
+        async with self.session.begin():
+            stmt = (
+                sa.delete(like_training_table)
+                .where(like_training_table.c.training_id == training_id)
+            )
+            await self.session.execute(stmt)
+            await self.session.commit()
+
+    async def query_exists_user_data_for_kkal(self, user_id: int) -> bool:
+        stmt = (
+            sa.select(users_table.c.norma_kkal)
             .where(users_table.c.user_id == user_id)
         )
         result = await self.session.execute(stmt)
-        roles = result.scalars().all()
-        return AccessGC(roles)
+        norma_kkal = result.scalar()
+        if norma_kkal is None:
+            status = None
+        else:
+            status = norma_kkal
+        
+        return {"kkal": status}
+
+    async def query_random_training(
+        self, 
+        category_id: UUID, 
+        user_id: int,
+        is_like: bool
+    ) -> dict:
+        stmt = (
+            sa.select(Training)
+            .select_from(Training)
+            .where(trainigs_table.c.category_id == category_id)
+            .order_by(sa.func.random())
+            .limit(1)
+        )
+        if not is_like:
+            stmt = (
+                stmt.outerjoin(like_training_table, 
+                sa.and_(
+                    trainigs_table.c.training_id == like_training_table.c.training_id,
+                    like_training_table.c.user_id == user_id,
+                ),
+                ).where(like_training_table.c.training_id == None)
+            )
+            is_like = True
+            is_delete = False
+        else:
+            stmt = (
+                stmt.join(
+                    like_training_table,
+                    trainigs_table.c.training_id == like_training_table.c.training_id
+                )
+            )
+            is_like = False
+            is_delete = True
+
+        result = await self.session.execute(stmt)
+        training = result.scalar()
+        if training is None:
+            if not is_like:
+                message = "Видео с тренировками отсутсвуют 🤷🏻"
+            else:
+                message = "Все тренировки данной категории добавлены в избранное ❤️"
+            return {
+                "message": message
+            }
+        
+        return {
+            "training_id": training.training_id,
+            "videos": sorted(training.videos, key=lambda x: x.message_id),
+            "text": training.text,
+            "is_like": is_like,
+            "is_delete": is_delete
+        }
+
+    async def query_categories(self, user_id: int | None = None) -> dict:
+        stmt = sa.select(categories_table)
+        if user_id is not None:
+            subq_stmt = (
+                sa.select(trainigs_table.c.category_id)
+                .select_from(trainigs_table)
+                .join(
+                    like_training_table,
+                    like_training_table.c.training_id == trainigs_table.c.training_id
+                )
+                .where(like_training_table.c.user_id == user_id)
+            )
+            stmt = stmt.where(categories_table.c.category_id.in_(subq_stmt))
+        rows = await self.session.execute(stmt)
+        categories = []
+        for row in rows:
+            if row.category_id:
+                categories.append((row.name, row.category_id))
+
+        return {"categories": categories}
+
+    async def query_user_roles(self, user_id: int) -> AccessGC:
+        stmt = (
+            sa.select(
+                users_table.c.user_id.label("user_id"), 
+                roles_table.c.group_id.label("group_id")
+            )
+            .select_from(users_table)
+            .join(roles_table, users_table.c.email == roles_table.c.email, isouter=True)
+            .where(users_table.c.user_id == user_id)
+        )
+        rows = await self.session.execute(stmt)
+        group_ids = []
+        for row in rows:
+            if row.group_id is not None:
+                group_ids.append(row.group_id)
+        try:
+            return AccessGC(row.user_id, group_ids)
+        except NameError:
+            return AccessGC(None, [])
+
+    async def query_exists_user(self, user_id: int) -> bool:
+        stmt = (
+            sa.select(users_table.c.user_id)
+            .where(users_table.c.user_id == user_id)
+        )
+        result = await self.session.execute(stmt)
+        user_id = result.scalar()
+        if user_id is None:
+            return False
+        return True
 
     async def query_last_training(self) -> Training:
         stmt = (
@@ -157,19 +327,6 @@ class QueryService:
             "is_like": True
         }
 
-    async def query_categories(self) -> dict:
-        new_stmt = sa.select(categories_table)
-        rows = await self.session.execute(new_stmt)
-        categories = []
-        for row in rows:
-            if row.category_id:
-                categories.append((row.name, row.category_id))
-        print(categories)
-        return {
-            "categories": categories,
-            "count": len(categories)
-        }
-
     async def query_roles_with_id(self, user_id: int) -> dict:
         new_stmt = (
             sa.select(User)
@@ -200,12 +357,6 @@ class QueryService:
             "roles": roles,
             "on_view": user.on_view
         }
-        # except AttributeError:
-        #     return {
-        #         "email": None,
-        #         "roles": [NameRole.Free],
-        #         "on_view": None
-        #     }
         
     async def query_users(self, user_id: int) -> User:
         new_stmt = (
@@ -370,53 +521,50 @@ class QueryService:
         
         return True
     
-    async def query_for_menu(self, meal: str) -> dict:
-        new_stmt = sa.select(Recipe).where(Recipe.type_meal == meal).order_by(sa.func.random()).limit(1)
-        result = await self.session.execute(new_stmt)
-        recipe = result.scalar()
-        list_ingredients = []
-        list_g = []
-        for ingredient in recipe.ingredients:
-            list_ingredients.append(f"🔹 {ingredient.name.title()}\n")
-            list_g.append(f"{ingredient.value}{ingredient.unit}")
+    # async def query_recipe_with_type(self, meal: str) -> dict:
+    #     new_stmt = sa.select(Recipe).where(Recipe.type_meal == meal).order_by(sa.func.random()).limit(1)
+    #     result = await self.session.execute(new_stmt)
+    #     recipe = result.scalar()
+    #     list_ingredients = []
+    #     list_gram = []
+    #     for ingredient in recipe.ingredients:
+    #         list_ingredients.append(f"🔹 {ingredient.name.title()}\n")
+    #         list_gram.append(f"{ingredient.value}{ingredient.unit}")
 
-        return {
-            "recipe_id": recipe.recipe_id,
-            "name": recipe.name,
-            "recipe": recipe.recipe,
-            "photo_id": recipe.photo_id,
-            "amount_kkal": recipe.amount_kkal,
-            "b": recipe.kbju.b,
-            "j": recipe.kbju.j,
-            "u": recipe.kbju.u,
-            "type_meal": recipe.type_meal,
-            "ingredients": list_ingredients,
-            "g": list_g,
-            "class": recipe
-        }
+    #     return {
+    #         "recipe_id": recipe.recipe_id,
+    #         "name": recipe.name,
+    #         "recipe": recipe.recipe,
+    #         "photo_id": recipe.photo_id,
+    #         "amount_kkal": recipe.amount_kkal,
+    #         "type_meal": recipe.type_meal,
+    #         "ingredients": list_ingredients,
+    #         "grams": list_gram,
+    #         "class": recipe
+    #     }
     
-    async def query_day_menu_id(self, user_id: int, date: datetime) -> dict | None:
-        new_stmt = (
-            sa.select(day_menu_table)
-            .where(day_menu_table.c.user_id == user_id)
-            .where(day_menu_table.c.created_at == sa.cast(date, sa.DATE))
-        )
-        rows = await self.session.execute(new_stmt)
-        for row in rows:
-            try:
-                return {
-                    "user_id": user_id,
-                    "menu_id": row.menu_id
-                }
-            except AttributeError:
-                return {
-                    "user_id": user_id,
-                    "menu_id": None
-                }
-        return {
-            "user_id": user_id,
-            "menu_id": None
-        }
+    # async def query_day_menu_id(self, user_id: int, date: datetime) -> dict | None:
+    #     new_stmt = (
+    #         sa.select(day_menu_table)
+    #         .where(day_menu_table.c.user_id == user_id)
+    #         .where(day_menu_table.c.created_at == sa.cast(date, sa.DATE))
+    #     )
+    #     rows = await self.session.execute(new_stmt)
+    #     for row in rows:
+    #         try:
+    #             return {
+    #                 "user_id": user_id,
+    #                 "menu_id": row.menu_id
+    #             }
+    #         except AttributeError:
+    #             return {
+    #                 "user_id": user_id,
+    #                 "menu_id": None
+    #             }
+    #     return {
+    #         "user_id": user_id,
+    #         "menu_id": None
+    #     }
     
     async def query_day_meny(self, user_id: int, date: datetime.date) -> DayMenu:
         new_stmt = (
@@ -454,10 +602,4 @@ class QueryService:
                 .where(role_id.c.role_id == role_id)
             )
             await self.session.execute(new_stmt)
-            await self.session.commit()
-
-    async def delete_like_traioning(self, tr_id):
-        async with self.session.begin():
-            s = sa.delete(like_training_table).where(like_training_table.c.training_id == tr_id)
-            await self.session.execute(s)
             await self.session.commit()

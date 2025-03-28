@@ -1,4 +1,5 @@
 import asyncio
+
 from email_validator import validate_email, EmailNotValidError
 from aiogram import F, Bot, types as t
 from aiogram.fsm.state import State, StatesGroup
@@ -10,7 +11,7 @@ from dishka.integrations.aiogram_dialog import inject
 
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import PaidStartingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import PaidStartingDialog
 
 
 class AnonUserDialog(StatesGroup):
@@ -107,7 +108,6 @@ anon_starting_dialog = Dialog(
 )
 
 
-@staticmethod
 @inject
 async def on_click_im_paid(
     callback: t.CallbackQuery,
@@ -125,14 +125,13 @@ async def on_click_im_paid(
             PaidStartingDialog.start,
             data={
                 "user_id": callback.from_user.id,
-                "roles": access_user.groups
+                "groups": access_user.groups
             },
             show_mode=ShowMode.EDIT,
             mode=StartMode.RESET_STACK
         )
 
 
-@staticmethod
 @inject
 async def on_click_check_access(
     callback: t.CallbackQuery,
@@ -152,7 +151,7 @@ async def on_click_check_access(
             PaidStartingDialog.start,
             data={
                 "user_id": callback.from_user.id,
-                "roles": access_user.groups
+                "groups": access_user.groups
             },
             show_mode=ShowMode.EDIT,
             mode=StartMode.RESET_STACK

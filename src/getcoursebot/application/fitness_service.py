@@ -7,22 +7,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from getcoursebot.application import commands as cmd
 from getcoursebot.application.error import AlreadyExists
-from getcoursebot.domain.model.day_menu import Ingredient, Recipe, TypeMeal
+from getcoursebot.domain.model.day_menu import DayMenu, Ingredient, Recipe, TypeMeal
 from getcoursebot.domain.model.proportions import KBJU, Proportions
 from getcoursebot.domain.model.training import Category, LikeTraining, Training
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.repositories import RecipeRepository, TrainingRepository, UserRepositories
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
 from getcoursebot.port.adapter.orm import users_table, roles_table
-from getcoursebot.port.adapter.aiogram.dialogs.auth import authorize
 
 
 def parse_recipe(data: dict):
     TYPE_MAP = {
-        "завтрак": TypeMeal.Breakfast,
-        "обед": TypeMeal.Lunch,
-        "ужин": TypeMeal.Dinner,
-        "перекус": TypeMeal.Snack
+        "завтрак": TypeMeal.BREAKFAST,
+        "обед": TypeMeal.LUNCH,
+        "ужин": TypeMeal.DINNER,
+        "перекус": TypeMeal.SNACK
     }
     return Recipe(
         data["id"],
@@ -120,6 +119,13 @@ class FitnessService:
         self._training_repository = training_repository
         # self._query_service = query_service
 
+    async def adjusted_recipes(self, recipes_ids: list[int], kkal, user_snack) -> dict:
+        async with self._session.begin():
+            recipes = await self._recipe_repository.with_ids(recipes_ids)
+            menu = DayMenu()
+            menu.set_positions(recipes, kkal, user_snack)
+            return menu.repr()
+        
     async def create_free_user(self, user_id: int, email: str) -> None:
         async with self._session.begin():
             new_user = User(user_id, email)

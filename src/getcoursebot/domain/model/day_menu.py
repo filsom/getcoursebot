@@ -1,35 +1,23 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum, StrEnum, auto
-from typing import Literal
 from uuid import UUID, uuid4
 from decimal import Decimal as D
 
 from getcoursebot.domain.model.proportions import KBJU
 
 
-UNIT = Literal["мл", "шт", "г"]
-
-
-class TypeMeal:
-    Breakfast = 1
-    Lunch = 2
-    Dinner = 3
-    Snack= 4
+class TypeMeal(object):
+    BREAKFAST = 1
+    LUNCH = 2
+    DINNER = 3
+    SNACK= 4
 
 
 @dataclass
 class Ingredient:
     name: str
     value: D
-    unit: UNIT
-
-
-@dataclass
-class AdjustedIngredient:
-    name: str
-    value: D
-    unit: UNIT
+    unit: str
 
 
 @dataclass
@@ -40,7 +28,7 @@ class AdjustedRecipe:
     photo_id: int
     amount_kkal: D
     type_meal: TypeMeal
-    ingredients: list[AdjustedIngredient]
+    ingredients: list[Ingredient]
 
 
 @dataclass
@@ -63,9 +51,9 @@ class Recipe:
             value = D(adjusted_amount).quantize(D("1"))
             if value == 0:
                 value = D("1")
-            adjusted.append(AdjustedIngredient(ingredient.name, value, ingredient.unit))
+            adjusted.append(Ingredient(ingredient.name, value, ingredient.unit))
         return AdjustedRecipe(
-            uuid4(), 
+            self.recipe_id, 
             self.name,
             self.recipe,
             self.photo_id,
@@ -78,14 +66,11 @@ class Recipe:
 @dataclass
 class DayMenu:
     ratio = {
-        TypeMeal.Breakfast: D("30"),
-        TypeMeal.Lunch: D("30"),
-        TypeMeal.Snack: D("15"),
-        TypeMeal.Dinner: D("25")
+        TypeMeal.BREAKFAST: D("30"),
+        TypeMeal.LUNCH: D("30"),
+        TypeMeal.SNACK: D("15"),
+        TypeMeal.DINNER: D("25")
     }
-    
-    user_id: int
-    created_at: datetime
     my_snack_kkal: D | None = None
     my_recepts: list[AdjustedRecipe] | None = field(default_factory=list)
 
@@ -108,21 +93,17 @@ class DayMenu:
 
     def repr(self):
         TYPE_MAP = {
-            TypeMeal.Breakfast:"завтрак",
-            TypeMeal.Lunch:"обед",
-            TypeMeal.Dinner:"ужин",
-            TypeMeal.Snack:"перекус"
+            TypeMeal.BREAKFAST: "завтрак",
+            TypeMeal.LUNCH: "обед",
+            TypeMeal.DINNER: "ужин",
+            TypeMeal.SNACK: "перекус"
         }
-        list_recipes = []
+        dict_recipes = {}
         for recipe in self.my_recepts:
             str_ingredients = ""
             for ingredient in recipe.ingredients:
                 str_ingredients += f"🔹 {ingredient.name.title()} {ingredient.value}{ingredient.unit}\n"
-            repr_recipe = {
-                "title": f"{TYPE_MAP.get(recipe.type_meal).upper()}: {recipe.name.title()}\n",
-                "ingredients": str_ingredients,
-                "text": f"{recipe.recipe}\n",
-                "photo_id": recipe.photo_id
-            }
-            list_recipes.append(repr_recipe)
-        return list_recipes
+            str_result = f"{TYPE_MAP.get(recipe.type_meal).upper()}: {recipe.name.title()}\n\n{str_ingredients}\n{recipe.recipe}"
+            dict_recipes.update({recipe.recipe_id:str_result})
+        dict_recipes.update({"amount_kkal": str(self.my_snack_kkal)})
+        return dict_recipes

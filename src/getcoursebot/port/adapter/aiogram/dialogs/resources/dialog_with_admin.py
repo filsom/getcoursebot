@@ -3,9 +3,9 @@ from aiogram import F
 from aiogram_dialog import Dialog, DialogManager, ShowMode, StartMode, Window
 from aiogram_dialog.widgets import text, input, kbd
 from getcoursebot.domain.model.user import IDRole, NameRole
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_helpers import Clicker, Getter, change_email_handler, email_handler, inpute_name_category_handler
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import AddAccessDialog, AddCategoryDialog, AdminStartingDialog, CloseAccessDialog, ContentBotDialog, PaidStartingDialog, UsersGroupsDialog
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_with_mailling import MaillingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_helpers import Clicker, Getter, change_email_handler, email_handler, inpute_name_category_handler
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import AddAccessDialog, AddCategoryDialog, AdminStartingDialog, CloseAccessDialog, ContentBotDialog, PaidStartingDialog, UsersGroupsDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_mailling import MaillingDialog
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import NewTrainingDialog
 
 

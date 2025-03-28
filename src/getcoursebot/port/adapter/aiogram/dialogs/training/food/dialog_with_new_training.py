@@ -7,7 +7,7 @@ from aiogram_dialog.widgets import input, text, kbd
 from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Const, Format
 
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_with_mailling import MaillingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_mailling import MaillingDialog
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import (
     NewTrainingDialog
 )

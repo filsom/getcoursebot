@@ -13,7 +13,7 @@ from getcoursebot.application.commands import CalculateDayNormCommand, InputeDay
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.domain.model.proportions import СoefficientActivity
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.start.dialog_states import PaidStartingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import PaidStartingDialog
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import CalculateDialog, DayMenuDialog, FoodDialog, InputDialog, WithDataDialog
 
 
@@ -31,13 +31,6 @@ class Getter:
             "c_types": activity_types,
             "count": len(activity_types)
         }
-
-
-    # FAST_SLIM = D("-0.8")
-    # FLUENTLY_SLIM = D("-0.9")
-    # DEFAULT = D("1")
-    # FLUENTLY_SET = D("1.1")
-    # FAST_SET = D("1.2")
 
     @staticmethod
     async def get_data_target(**kwargs):
@@ -87,6 +80,7 @@ class Clicker:
         widget, 
         dialog_manager: DialogManager, 
     ):
+        dialog_manager.find()
         await dialog_manager.start(
             FoodDialog.start,
             data={
@@ -226,26 +220,26 @@ class Clicker:
         await callback.message.edit_text(text="Что будем делать?", reply_markup=builder.as_markup())
 
 
-with_data_dialog = Dialog(
-    Window(
-        text.Format("{text}"),
-        kbd.Column(
-            kbd.Button(
-                text.Const("Расчет КБЖУ"), 
-                id="calc_kbju", 
-                on_click=Clicker.on_calc_kbju
-            ),
-            kbd.Button(
-                text.Const("Ввести КБЖУ"), 
-                id="input_kbju",
-                on_click=Clicker.on_input_kbju
-            ),
-            kbd.Cancel(text.Const("⬅️ На главную"), id="in_main", on_click=Clicker.on_closed_dialog)
-        ),
-        state=WithDataDialog.start,
-        getter=Getter.get_user_data
-    )
-)
+# with_data_dialog = Dialog(
+#     Window(
+#         text.Format("{text}"),
+#         kbd.Column(
+#             kbd.Button(
+#                 text.Const("Расчет КБЖУ"), 
+#                 id="calc_kbju", 
+#                 on_click=Clicker.on_calc_kbju
+#             ),
+#             kbd.Button(
+#                 text.Const("Ввести КБЖУ"), 
+#                 id="input_kbju",
+#                 on_click=Clicker.on_input_kbju
+#             ),
+#             kbd.Cancel(text.Const("⬅️ На главную"), id="in_main", on_click=Clicker.on_closed_dialog)
+#         ),
+#         state=WithDataDialog.start,
+#         getter=Getter.get_user_data
+#     )
+# )
 
 
 class Inputter:
@@ -307,7 +301,7 @@ calculate_kbju_dialog = Dialog(
     ),
     Window(
         text.Format(
-            "Вам необходимо ежедневно: (тех прим: округляем цифры до целых)\n\n"
+            "Вам необходимо ежедневно:\n\n"
             "ККал - {kkal}\n"
             "Белки - {b}\n"
             "Жиры - {j}\n"

@@ -47,9 +47,14 @@ class RecipeRepository:
         self._session.add(recipe)
 
     async def with_ids(self, recipe_ids: list[UUID]) -> list[Recipe]:
-        stmt = sa.select(Recipe).where.in_(recipe_ids)
+        stmt = sa.select(Recipe).where(recipes_table.c.recipe_id.in_(recipe_ids))
         result = await self._session.execute(stmt)
-        return result.scalars().all()
+        # return result.scalars().unique().all()
+        x = result.scalars().unique()
+        l = []
+        for i in x:
+            l.append(i)
+        return l
 
     async def add_menu(self, menu: DayMenu) -> None:
         self._session.add(menu)

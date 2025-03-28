@@ -5,7 +5,8 @@ class Group(object):
 
 
 class AccessGC:
-    def __init__(self, groups: list[Group]):
+    def __init__(self, user_id: int | None, groups: list[Group]):
+        self.user_id = user_id
         self.groups = groups
 
     def check_group(self, value: Group) -> bool:
@@ -13,7 +14,7 @@ class AccessGC:
             return False
         
         for group in self.groups:
-            if group == value or value == Group.ADMIN:
+            if group == value or group == Group.ADMIN:
                 return True
         return False
     

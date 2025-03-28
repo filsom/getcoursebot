@@ -18,7 +18,6 @@ class TrySubDialog(StatesGroup):
 class PaidStartingDialog(StatesGroup):
     start = State()
     not_access = State()
-    menu = State()
 
 
 class AdminStartingDialog(StatesGroup):

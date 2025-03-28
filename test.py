@@ -83,6 +83,10 @@
 #     asyncio.run(main())
 
 
+from dataclasses import dataclass
+from uuid import uuid4
+
+
 class Group(object):
     ADMIN = 1
     FOOD = 2315673
@@ -107,3 +111,37 @@ class AccessGC:
             return True
         
         return False
+    
+
+x = [{1: "a", 2: "b"}]
+
+
+for i in x:
+    # print("-")
+    # print(i.keys())
+    i[1] = i[2] + "a"
+
+
+@dataclass
+class Y:
+    i: int    
+
+@dataclass
+class X:
+    i: int
+
+#     def x(self):
+#         return Y(self.i + 10)
+    
+
+# x = [{12345678: None, "class": X(2)}]
+
+
+# for i in x:
+#     x[12345678] = i["class"].x()
+
+x = {}
+x.setdefault("t", {})
+x["t"].update({1: "a"})
+x["t"].update({2: "b"})
+print(x)
