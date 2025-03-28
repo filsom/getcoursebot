@@ -8,7 +8,9 @@ from aiogram_dialog.api.entities import MediaAttachment, MediaId
 from aiogram_dialog.widgets.common import ManagedScroll
 from aiogram_dialog.widgets.media import DynamicMedia
 
-from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import UploadMediaDialog
+from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import (
+    UploadMediaDialog
+)
 
 
 async def on_delete(

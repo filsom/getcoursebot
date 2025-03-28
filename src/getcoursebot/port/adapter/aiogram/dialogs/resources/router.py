@@ -21,40 +21,35 @@ async def start(
     dialog_manager: DialogManager,
     service: FromDishka[QueryService]
 ):
-    # await message.delete()
-    # access_user = await service.query_user_roles(
-    #     message.from_user.id
-    # )
-    # if access_user.groups_empty():
-    #     if access_user.user_id is None:
-    #         await dialog_manager.start(
-    #             AnonUserDialog.start,
-    #             mode=StartMode.RESET_STACK
-    #         )
-    #     else:
-    #         await dialog_manager.start(
-    #             FreeUserDialog.start,
-    #             mode=StartMode.RESET_STACK,
-    #             show_mode=ShowMode.EDIT
-    #         )
+    await message.delete()
+    access_user = await service.query_user_roles(
+        message.from_user.id
+    )
+    if access_user.groups_empty():
+        if access_user.user_id is None:
+            await dialog_manager.start(
+                AnonUserDialog.start,
+                mode=StartMode.RESET_STACK
+            )
+        else:
+            await dialog_manager.start(
+                FreeUserDialog.start,
+                mode=StartMode.RESET_STACK,
+                show_mode=ShowMode.EDIT
+            )
     # # elif access_user.check_group(Group.ADMIN):
     # #     await dialog_manager.start()
     
-    # else:
-    #     await dialog_manager.start(
-    #         state=PaidStartingDialog.start,
-    #         data={"groups": access_user.groups},
-    #         show_mode=ShowMode.EDIT,
-    #         mode=StartMode.RESET_STACK
-    #     )
-    await dialog_manager.start(
-        state=UploadMediaDialog.start,
-        # data={"groups": access_user.groups},
-        show_mode=ShowMode.EDIT,
-        mode=StartMode.RESET_STACK
-    )
+    else:
+        await dialog_manager.start(
+            state=PaidStartingDialog.start,
+            data={"groups": access_user.groups},
+            show_mode=ShowMode.EDIT,
+            mode=StartMode.RESET_STACK
+        )
 
     
 @starting_router.callback_query(F.data.startswith("from_mailing"))
 async def callback_from_mailing(callback: t.CallbackQuery):
+    # Stub
     pass
