@@ -6,8 +6,8 @@ from .dialog_with_food import (
     # with_data_dialog, 
     # input_kbju_dialog,
 )
-from .dialog_with_foods import food_dialog, input_kbju_dialog
-from .dialog_with_day_menu import day_menu_dialog
+from ...resources.dialog_with_food import food_dialog, input_kbju_dialog
+from ...resources.dialog_with_day_menu import day_menu_dialog
 
 
 content_router = Router()
