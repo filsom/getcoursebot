@@ -132,16 +132,16 @@ async def on_click_success(
     dialog_manager: DialogManager,
 ):
     bot: Bot = dialog_manager.middleware_data["bot"]
-    if dialog_manager.dialog_data.get("preview_messages") is not None:
+    if len(dialog_manager.dialog_data.get("preview_messages")) != 0:
         await bot.delete_messages(
             callback.from_user.id,
             dialog_manager.dialog_data["preview_messages"]
         )
         dialog_manager.dialog_data["preview_messages"].clear()
     await dialog_manager.done(
-        {
-        "media": dialog_manager.dialog_data["media"],
-        "inpute_text_media": dialog_manager.dialog_data["media_text"]
+        result= {
+            "media": dialog_manager.dialog_data["media"],
+            "inpute_text_media": dialog_manager.dialog_data["media_text"]
         },
         show_mode=ShowMode.EDIT
     )
