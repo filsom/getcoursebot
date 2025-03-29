@@ -136,6 +136,17 @@ class FitnessService:
         async with self._session.begin():
             self._session.add(m)
             await self._session.commit()
+
+    async def add_new_mailling(
+        self, 
+        file_ids: list[str], 
+        text: str, 
+        content_type: str, 
+        event_type: int
+    ):
+        async with self._session.begin():
+            self._session.add(m)
+            await self._session.commit()
     
     async def upload_recipe(self):
         async with self._session.begin():

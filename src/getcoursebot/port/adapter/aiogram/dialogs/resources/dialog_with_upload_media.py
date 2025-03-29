@@ -111,7 +111,7 @@ async def on_click_send_me(
     bot: Bot = dialog_manager.middleware_data["bot"]
     builder = MediaGroupBuilder()
     inline_builder = InlineKeyboardBuilder()
-    inline_builder.button(text="Все тренировки", callback_data="from_mailing")
+    inline_builder.button(text="Все тренировки", callback_data="from_mailing_stub")
     for media in dialog_manager.dialog_data["data_media"]:
         builder.add(type=media["content_type"], media=media["file_id"])
     messages = await bot.send_media_group(callback.from_user.id, media=builder.build())

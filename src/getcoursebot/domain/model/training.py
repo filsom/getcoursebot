@@ -48,8 +48,8 @@ class MaillingMedia:
 
 @dataclass
 class Malling:
-    mailling_id: int
-    mailling_roles: list
+    mailling_id: UUID
     text: str
     planed_in: datetime
-    photos: list[MaillingMedia]
+    media_ids: list[str]
+    event_mailing: int

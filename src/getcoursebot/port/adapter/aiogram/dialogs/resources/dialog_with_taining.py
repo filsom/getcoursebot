@@ -2,7 +2,7 @@ import operator
 
 from aiogram import F, Bot, types as t
 from aiogram.utils.media_group import MediaGroupBuilder
-from aiogram_dialog import Dialog, DialogManager, ShowMode, Window
+from aiogram_dialog import Dialog, DialogManager, ShowMode, StartMode, Window
 from aiogram_dialog.widgets import text, kbd
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -10,6 +10,7 @@ from dishka.integrations.aiogram_dialog import inject
 from getcoursebot.application.commands import AddTrainingCommand
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_send_mailings import EventMailing
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import NewTrainingDialog, TrainingDialog, UploadMediaDialog
 
 
@@ -257,6 +258,24 @@ async def process_result_add_training(
         await dialog_manager.next()
 
 
+@inject
+async def on_click_free_mailing(
+    callback: t.CallbackQuery,
+    button,
+    dialog_manager: DialogManager,
+):
+    await dialog_manager.start(
+        ...,
+        data={
+            "user_id": callback.from_user.id, 
+            "media": dialog_manager.dialog_data["media"],
+            "inpute_text_media": dialog_manager.dialog_data["media_text"],
+            "event_mailing": EventMailing.TRAINING
+        },
+        mode=StartMode.RESET_STACK,
+        show_mode=ShowMode.EDIT
+    )
+
 new_training_dialog = Dialog(
     Window(
         text.Const("Выберите категорию тренировки!"),
@@ -282,13 +301,9 @@ new_training_dialog = Dialog(
             kbd.Button(
                 text.Const("Да"),
                 id="yes_mailing",
-                on_click=...
+                on_click=on_click_free_mailing
             ),
-            kbd.Cancel(
-                text.Const("Нет"),
-                id="no_mailing",
-                on_click=...
-            )
+            kbd.Cancel(text.Const("Нет"))
         )
     )
 )

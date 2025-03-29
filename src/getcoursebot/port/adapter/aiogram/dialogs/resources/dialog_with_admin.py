@@ -9,6 +9,17 @@ from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_mailling im
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import NewTrainingDialog
 
 
+# Window(
+    #     kbd.Select(
+    #         text.Format("{name_mailing[0]}"),
+    #         id="s_name_mailing",
+    #         item_id_getter=operator.itemgetter(1),
+    #         items="mailings",
+    #         on_click=on_click_name_mailing
+    #     ),
+    #     getter=get_data_mailings
+    # )
+
 
 admin_starting_dialog = Dialog(
     Window(

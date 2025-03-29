@@ -31,22 +31,15 @@ class QueryService:
         self.session = session
 
     async def query_all_user_id_with_role(self, is_exists: bool = False) -> list[int]:
-        stmt = sa.select(users_table)
+        stmt = sa.select(users_table.c.user_id).where()
+        subq_stmt = sa.select(roles_table.c.email)
         if not is_exists:
-            stmt = (
-                stmt.outerjoin(
-                    roles_table,
-                    roles_table.c.email == users_table.c.email
-                )
-                .where(roles_table.c.email == None)
-            )
+            stmt = stmt.where(users_table.c.not_in_(subq_stmt))
         else:
-            stmt = (
-                stmt.join(
-                    roles_table,
-                    roles_table.c.email == users_table.c.email
-                )
-            )
+            stmt = stmt.where(users_table.c.in_(subq_stmt))
+
+        result = await self.session.execute(stmt)
+        return result.scalars()
 
     async def query_recipe_with_type(self, type_meal: str) -> dict:
         MAP_MEAL = {
