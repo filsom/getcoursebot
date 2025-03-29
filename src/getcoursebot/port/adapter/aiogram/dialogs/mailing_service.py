@@ -33,23 +33,23 @@ async def send_mailing_message(
            media=media[0]
         )
     media_messages = builder.build()
-    try:
-        if not users_ids:
-            return 
-        for user_id in users_ids:
+    if not users_ids:
+        return 
+    for user_id in users_ids:
+        try:
             await bot.send_media_group(user_id, media_messages)
             await bot.send_message(user_id, mailing_text, reply_markup=kbd)
             await asyncio.sleep(0.5)
-    except Exception as err:
-        pass
-    finally:
-        async with AsyncSession(engine) as session:
-            gateway = MailingGateway(session)
-            await gateway.update_status_mailing(
-                mailing_id, 
-                StatusMailing.DONE
-            )
-            await session.commit()
+        except Exception as err:
+            pass
+
+    async with AsyncSession(engine) as session:
+        gateway = MailingGateway(session)
+        await gateway.update_status_mailing(
+            mailing_id, 
+            StatusMailing.DONE
+        )
+        await session.commit()
 
 
 class MailingGateway:
