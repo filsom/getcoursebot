@@ -437,7 +437,7 @@ class QueryService:
             "on_view": user.on_view
         }
         
-    async def query_users(self, user_id: int) -> User:
+    async def query_user_data(self, user_id: int) -> User:
         new_stmt = (
             sa.select(User)
             .where(User.user_id == user_id)
@@ -453,11 +453,11 @@ class QueryService:
         result_roles = await self.session.execute(roles_stmt)
         roles_x = result_roles.scalars().all()
         if not roles_x:
-            roles = [NameRole.Free]
+            roles = []
         else:
             roles = []
             for role in roles_x:
-                roles.append(role.name)
+                roles.append(role.group_id)
 
         if user.kbju is None:
             return {

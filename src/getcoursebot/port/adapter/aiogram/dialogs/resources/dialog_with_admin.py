@@ -2,6 +2,7 @@ import operator
 from aiogram import F
 from aiogram_dialog import Dialog, DialogManager, ShowMode, StartMode, Window
 from aiogram_dialog.widgets import text, input, kbd
+from getcoursebot.domain.model.access import Group
 from getcoursebot.domain.model.user import IDRole, NameRole
 from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_helpers import Clicker, Getter, change_email_handler, email_handler, inpute_name_category_handler
 from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import AddAccessDialog, AddCategoryDialog, AdminStartingDialog, CloseAccessDialog, ContentBotDialog, PaidStartingDialog, UsersGroupsDialog
@@ -53,7 +54,7 @@ admin_starting_dialog = Dialog(
                 state=PaidStartingDialog.start,
                 show_mode=ShowMode.EDIT,
                 mode=StartMode.NORMAL,
-                data={"roles": [IDRole.Admin]}
+                data={"groups": [Group.ADMIN]}
             ),
         ),
         state=AdminStartingDialog.start

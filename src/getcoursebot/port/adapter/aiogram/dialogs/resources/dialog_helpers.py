@@ -212,6 +212,7 @@ class Clicker:
             NewTrainingDialog.start,
             show_mode=ShowMode.EDIT,
             mode=StartMode.NORMAL,
+            data={"from_training": True}
         )
 
     @staticmethod
@@ -345,7 +346,7 @@ class Clicker:
         dialog_manager: DialogManager,
         service: FromDishka[QueryService]
     ):
-        data = await service.query_users(
+        data = await service.query_user_data(
             callback.from_user.id
         )
         if NameRole.Food in data["roles"] or NameRole.Admin in data["roles"]:

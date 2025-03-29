@@ -1,5 +1,6 @@
 import asyncio
 import operator
+from typing import AsyncGenerator
 from uuid import uuid4
 from aiogram import F, Bot, types as t
 from aiogram.fsm.state import State, StatesGroup
@@ -9,9 +10,9 @@ from aiogram_dialog import Dialog, DialogManager, ShowMode, StartMode, Window
 from aiogram_dialog.widgets import text, kbd, input
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from getcoursebot.application.error import AlreadyProcessMailing
-from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.domain.model.training import RecipientMailing, StatusMailing
 from getcoursebot.port.adapter.aiogram.dialogs.mailing_service import TelegramMailingService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
@@ -30,6 +31,7 @@ class SendDialog(StatesGroup):
 
 class PlandeMaillingDialog(StatesGroup):
     start = State()
+    menu = State()
     end = State()
 
 
@@ -47,12 +49,13 @@ async def on_click_send_now_mailing(
     callback: t.CallbackQuery,
     button,
     dialog_manager: DialogManager,
-    service: FromDishka[TelegramMailingService]
+    service: FromDishka[TelegramMailingService],
+    engine: FromDishka[AsyncGenerator[AsyncEngine, None]]
 ):
     dialog_manager.show_mode = ShowMode.DELETE_AND_SEND
     bot: Bot = dialog_manager.middleware_data["bot"]
     mailing_id = uuid4()
-    type_recipient = int(dialog_manager.start_data["event_mailing"])
+    type_recipient = int(dialog_manager.start_data["type_recipient"])
     await service.add_new_mailing(
         mailing_id,
         None,
@@ -63,7 +66,7 @@ async def on_click_send_now_mailing(
     )
     try:
         task_mailing = await service.create_task_mailing(mailing_id)
-        _ = asyncio.create_task(task_mailing(kbd=make_inline_kbd(type_recipient), bot=bot))
+        _ = asyncio.create_task(task_mailing(bot=bot, engine=engine))
         await dialog_manager.switch_to(
             SendMailingDialog.send_end,
             show_mode=ShowMode.EDIT
@@ -85,7 +88,7 @@ async def on_click_name_mailing(
         data={
             "media": dialog_manager.dialog_data["media"],
             "inpute_text_media": dialog_manager.dialog_data["inpute_text_media"],
-            "event_mailing": item_id
+            "type_recipient": item_id
         },
         show_mode=ShowMode.EDIT
     )
@@ -110,6 +113,9 @@ async def input_name_mailing_handler(
     _,
     service: FromDishka[TelegramMailingService],
 ):
+    bot: Bot = dialog_manager.middleware_data["bot"]
+    message_id = dialog_manager.current_stack().last_message_id
+    await bot.delete_message(message.from_user.id, message_id)
     await message.delete()
     list_file_ids = []
     for media in dialog_manager.start_data["media"]:
@@ -125,7 +131,7 @@ async def input_name_mailing_handler(
             message.text.lower(),
             dialog_manager.start_data["inpute_text_media"][0],
             dialog_manager.start_data["media"],
-            int(dialog_manager.start_data["event_mailing"]),
+            int(dialog_manager.start_data["type_recipient"]),
             StatusMailing.AWAIT
         )
     await dialog_manager.next()
@@ -140,7 +146,7 @@ async def on_click_back_main(
     await dialog_manager.start(
         AdminStartingDialog.start,
         mode=StartMode.RESET_STACK,
-        show_mode=ShowMode.EDIT
+        show_mode=ShowMode.DELETE_AND_SEND
     )
 
 
@@ -249,7 +255,7 @@ mailing_dialog = Dialog(
         state=MaillingDialog.start
     ),
     Window(
-        text.Const("Выберите категорию пользователей."),
+        text.Const("Выберите категорию пользователей для рассылки."),
         kbd.Select(
             text.Format("{item[0]}"),
             id="s_name_mailing",
@@ -317,6 +323,71 @@ async def on_click_process_sending(
     )
 
 
+@inject
+async def on_click_delete_mailing(
+    callback: t.CallbackQuery,
+    button,
+    dialog_manager: DialogManager,
+    service: FromDishka[TelegramMailingService], 
+):
+    bot: Bot = dialog_manager.middleware_data["bot"]
+    await service.delete_mailing(
+        dialog_manager.dialog_data["mailing_id"]
+    )
+    await bot.delete_messages(
+        callback.from_user.id,
+        dialog_manager.dialog_data["preview_plan_mailing"]
+    )
+    await dialog_manager.done()
+
+
+@inject
+async def on_click_start_mailing(
+    callback: t.CallbackQuery,
+    button,
+    dialog_manager: DialogManager,
+    service: FromDishka[TelegramMailingService], 
+    engine: FromDishka[AsyncGenerator[AsyncEngine, None]]
+):
+    bot: Bot = dialog_manager.middleware_data["bot"]
+    try:
+        mailing_task = await service.create_task_mailing(
+            dialog_manager.dialog_data["mailing_id"]
+        )
+        _ = asyncio.create_task(mailing_task(bot=bot, engine=engine))
+        if dialog_manager.dialog_data.get("preview_plan_mailing", None) is not None:
+            await bot.delete_messages(
+                callback.from_user.id,
+                dialog_manager.dialog_data["preview_plan_mailing"]
+            )
+        dialog_manager.dialog_data["result_text"] = "Рассылка успещно запущена."
+    except AlreadyProcessMailing:
+            dialog_manager.dialog_data["result_text"] = "Не удалось запустить рассылку, так как есть рассылка в процессе выполнения."
+    await dialog_manager.next()
+
+
+async def get_result_text(
+    dialog_manager: DialogManager,
+    **kwargs
+):
+    return {
+        "result_text": dialog_manager.dialog_data.get("result_text", None)
+    }
+
+
+async def on_click_cancel_mailing(
+    callback: t.CallbackQuery,
+    button,
+    dialog_manager: DialogManager,
+):
+    bot: Bot = dialog_manager.middleware_data["bot"]
+    if dialog_manager.dialog_data.get("preview_plan_mailing", None) is not None:
+        await bot.delete_messages(
+            callback.from_user.id,
+            dialog_manager.dialog_data["preview_plan_mailing"]
+        )
+    
+
 
 planed_mailling_dialog = Dialog(
     Window(
@@ -336,25 +407,35 @@ planed_mailling_dialog = Dialog(
         state=PlandeMaillingDialog.start
     ),
     Window(
-        text.Const("Сообщение рассылки для рассылки 👆🏻"),
+        text.Const("Сообщение для рассылки 👆🏻"),
         kbd.Row(
             kbd.Button(
                 text.Const("Удалить"),
                 id="process_delete",
-                on_click=...
+                on_click=on_click_delete_mailing
             ),
             kbd.Button(
                 text.Const("Запустить 🔔"),
                 id="process_sending",
-                on_click=...
+                on_click=on_click_start_mailing
             ),
         ),
-        kbd.Back(text.Const("⬅️ К рассылкам")),
         kbd.Cancel(
             text.Const("⬅️ В Админ панель"),
             id="to_main_from_planed_mailling_1",
+            on_click=on_click_cancel_mailing
         ),
         getter=get_name_mailings,
+        state=PlandeMaillingDialog.menu
+    ),
+    Window(
+        text.Format("{result_text}"),
+        kbd.Cancel(
+            text.Const("⬅️ В Админ панель"),
+            id="to_main_from_planed_mailling_1",
+            on_click=on_click_cancel_mailing
+        ),
+        getter=get_result_text,
         state=PlandeMaillingDialog.end
-    )
+    )  
 )

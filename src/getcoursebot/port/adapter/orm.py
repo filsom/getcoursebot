@@ -75,7 +75,7 @@ like_training_table = sa.Table(
 
 
 trainigs_table = sa.Table(
-    'trainigs',
+    'trainings',
     metadata,
     sa.Column('training_id', sa.UUID, primary_key=True, default=uuid4, nullable=False),
     sa.Column('category_id', sa.ForeignKey('categories.category_id'), nullable=False),
@@ -88,7 +88,7 @@ training_medias_table = sa.Table(
     'trainings_medias',
     metadata,
     sa.Column('media_id', sa.UUID, primary_key=True, default=uuid4, nullable=False),
-    sa.Column('training_id', sa.ForeignKey('trainigs.training_id', ondelete="CASCADE"), nullable=False),
+    sa.Column('training_id', sa.ForeignKey('trainings.training_id', ondelete="CASCADE"), nullable=False),
     sa.Column('file_id', sa.String(200), nullable=False),
     sa.Column('file_unique_id', sa.String(100), nullable=False),
     sa.Column('message_id', sa.Integer, nullable=False),

@@ -16,20 +16,21 @@ async def get_kbd_status(dialog_manager: DialogManager, **kwargs):
         "food": dialog_manager.dialog_data["food"]
     }
 
-
+@inject
 async def on_сlick_training(
     callback: t.CallbackQuery,
     button,
     dialog_manager: DialogManager,
+    service: FromDishka[QueryService]
 ):
-    access_user = AccessGC(
-        callback.from_user.id,
-        dialog_manager.start_data["groups"]
-    )
+    access_user = await service.query_user_roles(callback.from_user.id)
     if access_user.check_group(Group.TRAINING):
         await dialog_manager.start(
             TrainingDialog.start,
-            data={"user_id": callback.from_user.id}
+            data={
+                "user_id": callback.from_user.id,
+                "groups": access_user.groups,
+            }
         )
     else:
         dialog_manager.dialog_data["training"] = False
@@ -42,17 +43,14 @@ async def on_сlick_food(
     callback: t.CallbackQuery,
     button,
     dialog_manager: DialogManager,
-    servie: FromDishka[QueryService]
+    service: FromDishka[QueryService]
 ):
-    access_user = AccessGC(
-        callback.from_user.id,
-        dialog_manager.start_data["groups"]
-    )
+    access_user = await service.query_user_roles(callback.from_user.id)
     if access_user.check_group(Group.FOOD):
         await dialog_manager.start(
             FoodDialog.start,
             data={
-                "groups": dialog_manager.start_data["groups"],
+                "groups": access_user.groups,
                 "user_id": callback.from_user.id
             }
         )

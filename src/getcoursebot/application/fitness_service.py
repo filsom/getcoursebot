@@ -9,7 +9,7 @@ from getcoursebot.application import commands as cmd
 from getcoursebot.application.error import AlreadyExists
 from getcoursebot.domain.model.day_menu import DayMenu, Ingredient, Recipe, TypeMeal
 from getcoursebot.domain.model.proportions import KBJU, Proportions
-from getcoursebot.domain.model.training import Category, LikeTraining, Mailing, MailingMedia, StatusMailing, Training
+from getcoursebot.domain.model.training import Category, LikeTraining, Mailing, MailingMedia, Media, StatusMailing, Training
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.repositories import RecipeRepository, TrainingRepository, UserRepositories
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
@@ -311,12 +311,15 @@ class FitnessService:
 
     async def add_training(self, command: cmd.AddTrainingCommand) -> UUID:
         async with self._session.begin():
+            list_media = []
+            for media in command.media:
+                list_media.append(Media(**media))
             training_id = uuid4()
             training = Training(
                     training_id,
                     command.category_id,
                     command.text,
-                    command.videos_id,
+                    list_media,
                     datetime.now()
                 )
             await self._training_repository.add(training)

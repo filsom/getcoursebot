@@ -55,4 +55,4 @@ class AddTrainingCommand:
     user_id: int
     category_id: int
     text: int
-    videos_id: list[int]
+    media: list

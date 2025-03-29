@@ -5,8 +5,10 @@ from uuid import UUID
 
 from aiogram import Bot
 from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram_dialog import ShowMode
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
 
 from getcoursebot.application.error import AlreadyProcessMailing
 from getcoursebot.domain.model.training import Mailing, MailingMedia, RecipientMailing, StatusMailing
@@ -16,12 +18,13 @@ from getcoursebot.port.adapter.orm import mailing_table, mailing_medias_table, u
 
 async def send_mailing_message(
     users_ids: list[int],
+    mailing_id: UUID,
     mailing_media: list[dict],
     mailing_text: str,
     kbd,
-    bot: Bot
+    bot: Bot,
+    engine: AsyncEngine
 ):
-    await asyncio.sleep(10)
     builder = MediaGroupBuilder()
     content_type = mailing_media[0][1]
     for media in mailing_media:
@@ -38,7 +41,15 @@ async def send_mailing_message(
             await bot.send_message(user_id, mailing_text, reply_markup=kbd)
             await asyncio.sleep(0.5)
     except Exception as err:
-        print(err)
+        pass
+    finally:
+        async with AsyncSession(engine) as session:
+            gateway = MailingGateway(session)
+            await gateway.update_status_mailing(
+                mailing_id, 
+                StatusMailing.DONE
+            )
+            await session.commit()
 
 
 class MailingGateway:
@@ -113,6 +124,13 @@ class MailingGateway:
         )
         await self.session.execute(stmt)
 
+    async def delete(self, mailing_id: UUID) -> None:
+        stmt = (
+            sa.delete(mailing_table)
+            .where(mailing_table.c.mailing_id == mailing_id)
+        )
+        await self.session.execute(stmt)
+
 
 class TelegramMailingService:
     def __init__(
@@ -167,12 +185,19 @@ class TelegramMailingService:
                 is_exists = True
             recipiens_ids = await self.gateway \
                 .query_all_user_id_with_role(is_exists=is_exists)
-
+            
+            kbd = None
+            if mailing["type_recipient"] == RecipientMailing.TRAINING:
+                builder = InlineKeyboardBuilder()
+                builder.button(text="Все тренировки", callback_data="from_mailing")
+                kbd = builder.as_markup(resize_keyboard=True)
             task = partial(
                 send_mailing_message, 
                 users_ids=recipiens_ids, 
+                mailing_id=mailing_id,
                 mailing_media=mailing["media"], 
-                mailing_text=mailing["text"]
+                mailing_text=mailing["text"],
+                kbd=kbd
             )
             await self.gateway.update_status_mailing(
                 mailing_id, StatusMailing.PROCESS
@@ -183,4 +208,9 @@ class TelegramMailingService:
     async def update_name_mailing(self, mailing_id: UUID, name: str) -> None:
         async with self.session.begin():
             await self.gateway.update_name(name, mailing_id)
+            await self.session.commit()
+
+    async def delete_mailing(self, mailing_id: UUID) -> None:
+        async with self.session.begin():
+            await self.gateway.delete(mailing_id)
             await self.session.commit()

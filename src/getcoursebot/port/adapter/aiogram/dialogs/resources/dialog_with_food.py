@@ -11,7 +11,7 @@ from getcoursebot.domain.model.day_menu import TypeMeal
 from getcoursebot.domain.model.proportions import СoefficientActivity
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import PaidStartingDialog
-from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import DayMenuDialog, FoodDialog, InputDialog
+from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import CalculateDialog, DayMenuDialog, FoodDialog, InputDialog
 
 
 
@@ -62,10 +62,10 @@ food_dialog = Dialog(
             "Вот что можем сделать:",
             when=F["kkal"]
         ),
-        kbd.Button(
+        kbd.Start(
             text.Const("Расчет КБЖУ"),
             id="cal_kbju",
-            on_click=...
+            state=CalculateDialog.start
         ),
         kbd.Start(
             text.Const("Ввести КБЖУ"),
@@ -111,6 +111,7 @@ async def on_activity_selected(
     dialog_manager: DialogManager, 
     item_id
 ):
+    dialog_manager.dialog_data["user_id"] = callback.from_user.id
     dialog_manager.dialog_data["c_activity"] = Decimal(item_id)
     if item_id == СoefficientActivity.DEFAULT_A:
         bot: Bot = dialog_manager.middleware_data["bot"]
@@ -121,6 +122,7 @@ async def on_activity_selected(
     await dialog_manager.next()
 
 
+@inject
 async def on_target_selected(
     callback: t.CallbackQuery, 
     widget, 
@@ -155,6 +157,7 @@ async def get_data_target(**kwargs):
     }
 
 
+@inject
 async def on_target_selected_input(
     callback: t.CallbackQuery, 
     widget, 
@@ -174,6 +177,19 @@ async def on_target_selected_input(
         )
     )
     await dialog_manager.next()
+
+
+@inject
+async def get_user_data(
+    dialog_manager: DialogManager, 
+    service: FromDishka[QueryService], 
+    **kwargs
+):
+    data = await service.query_user_data(
+        dialog_manager.dialog_data["user_id"]
+    )
+    dialog_manager.dialog_data.update(**data)
+    return dialog_manager.dialog_data
 
 
 input_kbju_dialog = Dialog(
@@ -237,24 +253,93 @@ input_kbju_dialog = Dialog(
         state=InputDialog.target,
         getter=get_data_target
     ),
-    # Window(
-    #     text.Format(
-    #         "Итак, необходимо ежедневно:\n\n"
-    #         "ККал - {kkal}\n"
-    #         "Белки - {b}\n"
-    #         "Жиры - {j}\n"
-    #         "Углеводы - {u}\n\n"
-    #         "Дальше я буду подбирать вам рецепты ежедневно, чтобы уложиться в эти цифры."
-    #         "Вы также можете ввести свои КБЖУ в первом разделе питания, "
-    #         "если хотите, и я буду подбирать рецепты под них."
-    #     ),
-    #     kbd.Button(
-    #         text.Const("Меню на день"), 
-    #         id="day_menu_3", 
-    #         on_click=Clicker.on_day_menu,
-    #     ),
-    #     kbd.Button(text.Const("⬅️ На главную"), id="in_main_3", on_click=Clicker.on_in_main_calc_hbju),
-    #     state=InputDialog.end,
-    #     getter=Getter.get_user_data
-    # )
+    Window(
+        text.Format(
+            "Итак, необходимо ежедневно:\n\n"
+            "ККал - {kkal}\n"
+            "Белки - {b}\n"
+            "Жиры - {j}\n"
+            "Углеводы - {u}\n\n"
+            "Дальше я буду подбирать вам рецепты ежедневно, чтобы уложиться в эти цифры."
+            "Вы также можете ввести свои КБЖУ в первом разделе питания, "
+            "если хотите, и я буду подбирать рецепты под них."
+        ),
+        kbd.Cancel(
+            text.Const("⬅️ На главную"), 
+            id="in_main_3", 
+        ),
+        state=InputDialog.end,
+        getter=get_user_data
+    )
+)
+
+
+calculate_kbju_dialog = Dialog(
+    Window(
+        text.Const(
+            "Напишите ваш текущий вес в кг.\n"
+            "Пришлите только цифры, например, 72👇"
+        ),
+        input.TextInput(id="inpute_weight", on_success=kbd.Next()),
+        state=CalculateDialog.start
+    ),
+    Window(
+        text.Const(
+            "Введите ваш рост в см.\n"
+            "Пришлите только цифры, например, 165👇"
+        ),
+        input.TextInput(id="inpute_hieght", on_success=kbd.Next()),
+        state=CalculateDialog.hieght
+    ),
+    Window(
+        text.Const(
+            "Напишите ваш возраст (лет).\n"
+            "Пришлите только цифры, например, 35👇"
+        ),
+        input.TextInput(id="inpute_age", on_success=kbd.Next()),
+        state=CalculateDialog.age
+    ),
+    Window(
+        text.Const("Выберите Ваш уровень активности:"),
+        kbd.Column(
+            kbd.Select(
+                text.Format("{item[0]}"),
+                id="s_types",
+                item_id_getter=lambda x: x[1],
+                items="c_types",
+                on_click=on_activity_selected
+            )
+        ),
+        state=CalculateDialog.activity,
+        getter=get_data_activity
+    ),
+    Window(
+        text.Const("Выберите цель меню:"),
+        kbd.Column(
+            kbd.Select(
+                text.Format("{item[0]}"),
+                id="s_1_types",
+                item_id_getter=lambda x: x[1],
+                items="types",
+                on_click=on_target_selected
+            )
+        ),
+        state=CalculateDialog.target,
+        getter=get_data_target
+    ),
+    Window(
+        text.Format(
+            "Вам необходимо ежедневно:\n\n"
+            "ККал - {kkal}\n"
+            "Белки - {b}\n"
+            "Жиры - {j}\n"
+            "Углеводы - {u}\n\n"
+            "Дальше я буду подбирать вам рецепты ежедневно, чтобы уложиться в эти цифры."
+            "Вы также можете ввести свои КБЖУ в первом разделе питания, "
+            "если хотите, и я буду подбирать рецепты под них."
+        ),
+        kbd.Cancel(text.Const("⬅️ На главную"), id="in_main_1"),
+        state=CalculateDialog.end,
+        getter=get_user_data
+    )
 )

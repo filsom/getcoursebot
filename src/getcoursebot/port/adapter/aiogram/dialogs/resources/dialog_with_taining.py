@@ -25,6 +25,17 @@ async def on_сlick_view_like_training(
     await dialog_manager.next()
 
 
+# async def on_click_category_name(
+#     callback: t.CallbackQuery,
+#     button,
+#     dialog_manager: DialogManager,
+#     item_id,
+# ):
+#     dialog_manager.dialog_data["category_id"] = item_id
+#     dialog_manager.dialog_data["user_id"] = callback.from_user.id
+#     await dialog_manager.next()
+
+
 async def on_click_category_name(
     callback: t.CallbackQuery,
     button,
@@ -33,7 +44,11 @@ async def on_click_category_name(
 ):
     dialog_manager.dialog_data["category_id"] = item_id
     dialog_manager.dialog_data["user_id"] = callback.from_user.id
-    await dialog_manager.next()
+    await dialog_manager.start(
+        UploadMediaDialog.start,
+        show_mode=ShowMode.EDIT,
+        data={"from_training": True}
+    )
 
 
 async def on_click_back_main(
@@ -224,20 +239,6 @@ async def get_categories_name(
     return await service.query_categories()
 
 
-async def on_click_category_name(
-    callback: t.CallbackQuery,
-    button,
-    dialog_manager: DialogManager,
-    item_id,
-):
-    dialog_manager.dialog_data["category_id"] = item_id
-    dialog_manager.dialog_data["user_id"] = callback.from_user.id
-    await dialog_manager.start(
-        UploadMediaDialog.start,
-        show_mode=ShowMode.EDIT
-    )
-
-
 @inject
 async def process_result_add_training(
     start_data,
@@ -270,8 +271,8 @@ async def on_click_free_mailing(
         data={
             "user_id": callback.from_user.id, 
             "media": dialog_manager.dialog_data["media"],
-            "inpute_text_media": dialog_manager.dialog_data["media_text"],
-            "event_mailing": RecipientMailing.TRAINING
+            "inpute_text_media": dialog_manager.dialog_data["inpute_text_media"],
+            "type_recipient": RecipientMailing.TRAINING
         },
         mode=StartMode.RESET_STACK,
         show_mode=ShowMode.EDIT
@@ -290,7 +291,7 @@ new_training_dialog = Dialog(
                 on_click=on_click_category_name
             ),
         ),
-        kbd.Cancel(text.Const("⬅️ В Админ панель"), id="to_main_228"),
+        kbd.Cancel(text.Const("⬅️ В Админ панель"), id="to_main"),
         state=NewTrainingDialog.start,
         getter=get_categories_name,
         on_process_result=process_result_add_training

@@ -53,7 +53,7 @@ class Getter:
         service: FromDishka[QueryService], 
         **kwargs
     ):
-        data = await service.query_users(
+        data = await service.query_user_data(
             dialog_manager.start_data["user_id"]
         )
         dialog_manager.dialog_data.update(**data)
@@ -66,7 +66,7 @@ class Getter:
         service: FromDishka[QueryService], 
         **kwargs
     ):
-        data = await service.query_users(
+        data = await service.query_user_data(
             dialog_manager.start_data["user_id"]
         )
         dialog_manager.dialog_data.update(**data)

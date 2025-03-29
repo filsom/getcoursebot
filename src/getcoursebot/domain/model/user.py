@@ -31,8 +31,7 @@ class IDRole(object):
 @dataclass
 class Role:
     email: str
-    role_id: int
-    name: str
+    group_id: int
 
 
 @dataclass
