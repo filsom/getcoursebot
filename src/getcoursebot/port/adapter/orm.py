@@ -4,22 +4,12 @@ from sqlalchemy.orm import registry, composite, relationship
 
 from getcoursebot.domain.model.day_menu import DayMenu, Ingredient, Recipe
 from getcoursebot.domain.model.proportions import KBJU, Proportions
-from getcoursebot.domain.model.training import Category, LikeTraining, MaillingMedia, Malling, Media, Training
+from getcoursebot.domain.model.training import Category, LikeTraining, MailingMedia, Mailing, Media, Training
 from getcoursebot.domain.model.user import Role, User
 
 
 metadata = sa.MetaData()
 mapper = registry()
-
-
-mailling_table = sa.Table(
-    "maillings",
-    metadata,
-    sa.Column('mailling_id', sa.UUID, primary_key=True, nullable=False),
-    sa.Column('mailling_roles', sa.ARRAY(sa.Integer), nullable=False),
-    sa.Column('text', sa.String(4000), nullable=False),
-    sa.Column('planed_in', sa.DATE, nullable=False),
-)
 
 
 users_table = sa.Table(
@@ -94,25 +84,37 @@ trainigs_table = sa.Table(
 )
 
 
-medias_table = sa.Table(
-    'medias',
+training_medias_table = sa.Table(
+    'trainings_medias',
     metadata,
     sa.Column('media_id', sa.UUID, primary_key=True, default=uuid4, nullable=False),
-    sa.Column('training_id', sa.ForeignKey('trainigs.training_id'), nullable=False),
+    sa.Column('training_id', sa.ForeignKey('trainigs.training_id', ondelete="CASCADE"), nullable=False),
     sa.Column('file_id', sa.String(200), nullable=False),
-    sa.Column('file_uniq_id', sa.String(100), nullable=False),
+    sa.Column('file_unique_id', sa.String(100), nullable=False),
     sa.Column('message_id', sa.Integer, nullable=False),
     sa.Column('content_type', sa.String, nullable=False)
 )
 
 
-malling_medias_table = sa.Table(
+mailing_table = sa.Table(
+    "mailings",
+    metadata,
+    sa.Column('mailing_id', sa.UUID, primary_key=True, nullable=False),
+    sa.Column('text', sa.String(4000), nullable=False),
+    sa.Column('name', sa.String(128), nullable=True),
+    sa.Column('planed_in', sa.DateTime, nullable=False),
+    sa.Column('type_recipient', sa.Integer, nullable=False),
+    sa.Column('status', sa.String(20), nullable=False),
+)
+
+
+mailing_medias_table = sa.Table(
     'malling_medias',
     metadata,
     sa.Column('media_id', sa.UUID, primary_key=True, default=uuid4, nullable=False),
-    sa.Column('mailling_id', sa.ForeignKey('maillings.mailling_id', ondelete="CASCADE"), nullable=False),
+    sa.Column('mailing_id', sa.ForeignKey('mailings.mailing_id', ondelete="CASCADE"), nullable=False),
     sa.Column('file_id', sa.String(200), nullable=False),
-    sa.Column('file_uniq_id', sa.String(100), nullable=False),
+    sa.Column('file_unique_id', sa.String(100), nullable=False),
     sa.Column('message_id', sa.Integer, nullable=False),
     sa.Column('content_type', sa.String, nullable=False)
 )
@@ -128,14 +130,14 @@ categories_table = sa.Table(
 
 def mappers(mapper: registry):
     mapper.map_imperatively(
-        MaillingMedia,
-        malling_medias_table
+        MailingMedia,
+        mailing_medias_table
     )
     mapper.map_imperatively(
-        Malling,
-        mailling_table,
+        Mailing,
+        mailing_table,
         properties={
-            "photos": relationship(MaillingMedia, lazy='joined')
+            "media": relationship(MailingMedia, lazy='joined')
         }
     )
     mapper.map_imperatively(
@@ -144,7 +146,7 @@ def mappers(mapper: registry):
     )
     mapper.map_imperatively(
         Media,
-        medias_table
+        training_medias_table
     )
     mapper.map_imperatively(
         Role,

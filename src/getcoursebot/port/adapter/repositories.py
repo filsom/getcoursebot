@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from getcoursebot.domain.model.day_menu import DayMenu, Recipe
 from getcoursebot.domain.model.training import Category, Training
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
-from getcoursebot.port.adapter.orm import users_table, roles_table, recipes_table
+from getcoursebot.port.adapter.orm import users_table, roles_table, recipes_table, mailing_table
 
 
 class UserRepositories:
@@ -112,3 +112,11 @@ class TrainingRepository:
         )
         result = await self._session.execute(stmt)
         return result.scalar()
+    
+    async def update_status_mailing(self, mailing_id, status) -> None:
+        stmt = (
+            sa.update(mailing_table.c.status)
+            .values(status=status)
+            .where(mailing_table.c.mailing_id == mailing_id)
+        )
+        await self.session.execute(stmt)

@@ -9,7 +9,7 @@ from getcoursebot.application import commands as cmd
 from getcoursebot.application.error import AlreadyExists
 from getcoursebot.domain.model.day_menu import DayMenu, Ingredient, Recipe, TypeMeal
 from getcoursebot.domain.model.proportions import KBJU, Proportions
-from getcoursebot.domain.model.training import Category, LikeTraining, Training
+from getcoursebot.domain.model.training import Category, LikeTraining, Mailing, MailingMedia, StatusMailing, Training
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.repositories import RecipeRepository, TrainingRepository, UserRepositories
 from getcoursebot.domain.model.user import IDRole, Role, NameRole, User
@@ -119,6 +119,13 @@ class FitnessService:
         self._training_repository = training_repository
         # self._query_service = query_service
 
+    async def process_sending_mailing(self, mailing_id: UUID):
+        async with self._session.begin():
+            await self._training_repository.update_status_mailing(
+                mailing_id, StatusMailing.PROCESS
+            )
+            
+
     async def adjusted_recipes(self, recipes_ids: list[int], kkal, user_snack) -> dict:
         async with self._session.begin():
             recipes = await self._recipe_repository.with_ids(recipes_ids)
@@ -139,13 +146,33 @@ class FitnessService:
 
     async def add_new_mailling(
         self, 
-        file_ids: list[str], 
+        name: str,
+        medias: list, 
         text: str, 
-        content_type: str, 
         event_type: int
     ):
         async with self._session.begin():
-            self._session.add(m)
+            list_media = []
+            for media in medias:
+                list_media.append(
+                    MailingMedia(
+                        media["message_id"],
+                        media["file_id"],
+                        media["file_unique_id"],
+                        media["content_type"]
+                    )
+                )
+            mailing = Mailing(
+                uuid4(),
+                name,
+                text,
+                datetime.now(),
+                list_media,
+                event_type,
+                StatusMailing.AWAIT
+
+            )
+            self._session.add(mailing)
             await self._session.commit()
     
     async def upload_recipe(self):

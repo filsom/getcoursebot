@@ -1,9 +1,8 @@
 from typing import AsyncGenerator, AsyncIterable
-
 from gspread import Spreadsheet, service_account, Client
 from dishka import Provider, Scope, from_context, provide
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-
+from getcoursebot.port.adapter.aiogram.dialogs.mailing_service import MailingGateway, TelegramMailingService
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.repositories import RecipeRepository, UserRepositories, TrainingRepository
@@ -48,3 +47,13 @@ class DependencyProvider(Provider):
         session: AsyncSession
     ) -> QueryService:
         return QueryService(session)
+    
+    @provide(scope=Scope.REQUEST)
+    async def get_mailing_service(
+        self, 
+        session: AsyncSession
+    ) -> TelegramMailingService:
+        return TelegramMailingService(
+            session,
+            MailingGateway(session)
+        )

@@ -5,6 +5,7 @@ from dishka.integrations.aiogram import FromDishka, inject
 
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
 from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_free_user import AnonUserDialog, FreeUserDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_mailings import MaillingDialog
 from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_paid_user import (
     PaidStartingDialog
 )
@@ -22,31 +23,31 @@ async def start(
     service: FromDishka[QueryService]
 ):
     await message.delete()
-    access_user = await service.query_user_roles(
-        message.from_user.id
-    )
-    if access_user.groups_empty():
-        if access_user.user_id is None:
-            await dialog_manager.start(
-                AnonUserDialog.start,
-                mode=StartMode.RESET_STACK
-            )
-        else:
-            await dialog_manager.start(
-                FreeUserDialog.start,
-                mode=StartMode.RESET_STACK,
-                show_mode=ShowMode.EDIT
-            )
-    # # elif access_user.check_group(Group.ADMIN):
-    # #     await dialog_manager.start()
+    # access_user = await service.query_user_roles(
+    #     message.from_user.id
+    # )
+    # if access_user.groups_empty():
+    #     if access_user.user_id is None:
+    #         await dialog_manager.start(
+    #             AnonUserDialog.start,
+    #             mode=StartMode.RESET_STACK
+    #         )
+    #     else:
+    #         await dialog_manager.start(
+    #             FreeUserDialog.start,
+    #             mode=StartMode.RESET_STACK,
+    #             show_mode=ShowMode.EDIT
+    #         )
+    # # # elif access_user.check_group(Group.ADMIN):
+    # # #     await dialog_manager.start()
     
-    else:
-        await dialog_manager.start(
-            state=PaidStartingDialog.start,
-            data={"groups": access_user.groups},
-            show_mode=ShowMode.EDIT,
-            mode=StartMode.RESET_STACK
-        )
+    # else:
+    await dialog_manager.start(
+        state=MaillingDialog.start,
+        data={"messages_delete": []},
+        show_mode=ShowMode.DELETE_AND_SEND,
+        mode=StartMode.RESET_STACK
+    )
 
     
 @starting_router.callback_query(F.data.startswith("from_mailing"))

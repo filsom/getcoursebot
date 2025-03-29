@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum, auto
 from uuid import UUID
 
 
@@ -7,7 +8,7 @@ from uuid import UUID
 class Media:
     message_id: int
     file_id: str
-    file_uniq_id: str
+    file_unique_id: str
     content_type: str
 
 
@@ -38,18 +39,31 @@ class Photos:
 
 
 @dataclass
-class MaillingMedia:
+class MailingMedia:
     message_id: int
     file_id: str
-    file_uniq_id: str
+    file_unique_id: str
     content_type: str
 
+
+class StatusMailing(StrEnum):
+    AWAIT = auto()
+    PROCESS = auto()
+    DONE = auto()
     
 
 @dataclass
-class Malling:
-    mailling_id: UUID
+class Mailing:
+    mailing_id: UUID
+    name: str | None
     text: str
     planed_in: datetime
-    media_ids: list[str]
-    event_mailing: int
+    media: list[MailingMedia]
+    type_recipient: int
+    status: StatusMailing
+
+
+class RecipientMailing(object):
+    TRAINING = 1
+    FREE = 2
+    PAID = 3

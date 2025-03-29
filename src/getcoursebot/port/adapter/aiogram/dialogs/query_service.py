@@ -7,7 +7,7 @@ from aiogram_dialog.api.entities import MediaAttachment
 from aiogram_dialog.api.entities import MediaAttachment, MediaId
 from getcoursebot.domain.model.access import AccessGC
 from getcoursebot.domain.model.day_menu import DayMenu, Recipe, TypeMeal
-from getcoursebot.domain.model.training import Category, Malling, Training
+from getcoursebot.domain.model.training import Category, Mailing, StatusMailing, Training
 from getcoursebot.domain.model.user import IDRole, NameRole, Role, User
 from getcoursebot.port.adapter.orm import (
     users_table, 
@@ -16,10 +16,10 @@ from getcoursebot.port.adapter.orm import (
     like_training_table,
     roles_table,
     recipes_table,
-    mailling_table,
+    mailing_table,
     trainigs_table,
-    medias_table,
-    ingredients_table
+    ingredients_table,
+    mailing_medias_table
 )
 
 
@@ -30,16 +30,84 @@ class QueryService:
     ):
         self.session = session
 
+    async def update_status_mailing(self, mailing_id, status) -> None:
+        async with self.session.begin():
+            stmt = (
+                sa.update(mailing_table.c.status)
+                .values(status=status)
+                .where(mailing_table.c.mailing_id == mailing_id)
+            )
+            await self.session.execute(stmt)
+            await self.session.commit()
+
+    async def query_mailing_with_id(self, mailing_id: UUID) -> dict:
+        mailing_stmt = (
+            sa.select(
+                mailing_table.c.text,
+                mailing_table.c.type_recipient
+            )
+            .where(mailing_table.c.mailing_id == mailing_id)
+        )
+        media_stmt = (
+            sa.select(
+                mailing_medias_table.c.file_id,
+                mailing_medias_table.c.content_type
+            )
+            .where(mailing_medias_table.c.mailing_id == mailing_id)
+        )
+        mailing_rows = await self.session.execute(mailing_stmt)
+        media_rows = await self.session.execute(media_stmt)
+        list_media = []
+        for media in media_rows:
+            list_media.append((media[0], media[1]))
+
+        for row in mailing_rows:
+            text = row.text
+            type = row.type_recipient
+
+        return {
+            "text": text,
+            "event_mailing": type,
+            "media": list_media
+        }
+
+    async def query_mailings_name(self) -> dict:
+        stmt = (
+            sa.select(
+                mailing_table.c.name,
+                mailing_table.c.mailing_id
+            )
+            .where(mailing_table.c.status == StatusMailing.AWAIT)
+        )
+        rows = await self.session.execute(stmt)
+        list_mailings_name = []
+        for row in rows:
+            list_mailings_name.append(row)
+        return {"plan_mailings": list_mailings_name}
+
+    async def query_count_active_mailing(self) -> int:
+        stmt = (
+            sa.select(sa.func.count())
+            .select_from(mailing_table)
+            .where(mailing_table.c.status == StatusMailing.PROCESS)
+        )
+        result = await self.session.execute(stmt)
+        count = result.scalar()
+        if count is None:
+            return 0
+        else:
+            return count
+
     async def query_all_user_id_with_role(self, is_exists: bool = False) -> list[int]:
         stmt = sa.select(users_table.c.user_id).where()
         subq_stmt = sa.select(roles_table.c.email)
         if not is_exists:
-            stmt = stmt.where(users_table.c.not_in_(subq_stmt))
+            stmt = stmt.where(users_table.c.email.not_in(subq_stmt))
         else:
-            stmt = stmt.where(users_table.c.in_(subq_stmt))
+            stmt = stmt.where(users_table.c.email.in_(subq_stmt))
 
         result = await self.session.execute(stmt)
-        return result.scalars()
+        return result.scalars().all()
 
     async def query_recipe_with_type(self, type_meal: str) -> dict:
         MAP_MEAL = {
@@ -232,13 +300,13 @@ class QueryService:
         }
 
     async def delete_malling(self, malling_id):
-        new = sa.delete(Malling).where(Malling.mailling_id == malling_id)
+        new = sa.delete(Mailing).where(Mailing.mailling_id == malling_id)
         await self.session.execute(new)
         await self.session.commit()
 
     async def get_malling_and_delete(self, id):
         stmt = (
-            sa.select(Malling).where(Malling.mailling_id == id)
+            sa.select(Mailing).where(Mailing.mailling_id == id)
         )
         re = await self.session.execute(stmt)
         m = re.scalar()
@@ -251,7 +319,7 @@ class QueryService:
         # else:
         #     data["mailling_status"] = "бесплатным"
         stmt = (
-            sa.select(Malling)
+            sa.select(Mailing)
         )
         result = await self.session.execute(stmt)
         mall = result.scalars().unique()

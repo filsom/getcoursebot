@@ -111,7 +111,10 @@ async def on_click_send_me(
     bot: Bot = dialog_manager.middleware_data["bot"]
     builder = MediaGroupBuilder()
     inline_builder = InlineKeyboardBuilder()
-    inline_builder.button(text="Все тренировки", callback_data="from_mailing_stub")
+    reply_markup = None
+    if dialog_manager.start_data.get("from_training", None) is not None:
+        inline_builder.button(text="Все тренировки", callback_data="from_mailing_stub")
+        reply_markup = inline_builder.as_markup(resize_keyboard=True)
     for media in dialog_manager.dialog_data["data_media"]:
         builder.add(type=media["content_type"], media=media["file_id"])
     messages = await bot.send_media_group(callback.from_user.id, media=builder.build())
@@ -121,7 +124,7 @@ async def on_click_send_me(
     text_message = await bot.send_message(
         callback.from_user.id, 
         dialog_manager.dialog_data["media_text"],
-        reply_markup=inline_builder.as_markup(resize_keyboard=True)
+        reply_markup=reply_markup
     )
     list_delete_message.append(text_message.message_id)
     dialog_manager.dialog_data["preview_messages"].extend(list_delete_message)
@@ -143,7 +146,7 @@ async def on_click_success(
     await dialog_manager.done(
         result= {
             "user_id": callback.from_user.id,
-            "media": dialog_manager.dialog_data["media"],
+            "media": dialog_manager.dialog_data["data_media"],
             "inpute_text_media": dialog_manager.dialog_data["media_text"]
         },
         show_mode=ShowMode.EDIT

@@ -15,7 +15,6 @@ from dishka.integrations.aiogram import AiogramProvider, setup_dishka
 
 from getcoursebot.port.adapter.dependency_provider import DependencyProvider
 from getcoursebot.port.adapter.aiogram.dialogs.resources import starting_router
-from getcoursebot.port.adapter.aiogram.dialogs.training.food import content_router
 from getcoursebot.port.adapter.orm import mappers, metadata, mapper
 
 
@@ -29,7 +28,7 @@ async def main():
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage, events_isolation=SimpleEventIsolation())
     dp.include_router(starting_router)
-    dp.include_router(content_router)
+    # dp.include_router(content_router)
 
     container = make_async_container(
         DependencyProvider(),

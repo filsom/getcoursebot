@@ -4,3 +4,7 @@ class ApplicationError(Exception):
 
 class AlreadyExists(ApplicationError):
     pass
+
+
+class AlreadyProcessMailing(ApplicationError):
+    pass

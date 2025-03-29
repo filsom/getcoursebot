@@ -1,5 +1,5 @@
 from aiogram.fsm.state import State, StatesGroup
-
+    
 
 class EmailInputeDialog(StatesGroup):
     start = State()
@@ -53,3 +53,10 @@ class ContentBotDialog(StatesGroup):
 class AddCategoryDialog(StatesGroup):
     start = State()
     confirm = State()
+
+
+class SendMailingDialog(StatesGroup):
+    start = State()
+    text = State()
+    plan_end = State()
+    send_end = State()

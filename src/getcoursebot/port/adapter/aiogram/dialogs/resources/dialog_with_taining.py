@@ -10,7 +10,8 @@ from dishka.integrations.aiogram_dialog import inject
 from getcoursebot.application.commands import AddTrainingCommand
 from getcoursebot.application.fitness_service import FitnessService
 from getcoursebot.port.adapter.aiogram.dialogs.query_service import QueryService
-from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_send_mailings import EventMailing
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_states import SendMailingDialog
+from getcoursebot.port.adapter.aiogram.dialogs.resources.dialog_with_mailings import RecipientMailing
 from getcoursebot.port.adapter.aiogram.dialogs.training.food.dialog_states import NewTrainingDialog, TrainingDialog, UploadMediaDialog
 
 
@@ -265,16 +266,17 @@ async def on_click_free_mailing(
     dialog_manager: DialogManager,
 ):
     await dialog_manager.start(
-        ...,
+        SendMailingDialog.start,
         data={
             "user_id": callback.from_user.id, 
             "media": dialog_manager.dialog_data["media"],
             "inpute_text_media": dialog_manager.dialog_data["media_text"],
-            "event_mailing": EventMailing.TRAINING
+            "event_mailing": RecipientMailing.TRAINING
         },
         mode=StartMode.RESET_STACK,
         show_mode=ShowMode.EDIT
     )
+
 
 new_training_dialog = Dialog(
     Window(
@@ -304,6 +306,7 @@ new_training_dialog = Dialog(
                 on_click=on_click_free_mailing
             ),
             kbd.Cancel(text.Const("Нет"))
-        )
+        ),
+        state=NewTrainingDialog.send,
     )
 )

@@ -9,11 +9,7 @@ class TrainingDialog(StatesGroup):
 
 class NewTrainingDialog(StatesGroup):
     start = State()
-    videos = State()
-    text = State()
-    view = State()
-    send_free = State()
-    send_pay_training = State()
+    send = State()
 
 
 class UploadMediaDialog(StatesGroup):
